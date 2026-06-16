@@ -1,0 +1,42 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-[#0b1210] text-gray-100 font-sans antialiased;
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-[#131f1b] rounded-2xl border border-[#1e3029] p-4;
+  }
+
+  .card-sm {
+    @apply bg-[#131f1b] rounded-xl border border-[#1e3029] px-3 py-2.5;
+  }
+
+  .btn-primary {
+    @apply bg-brand-green text-white font-semibold py-3 px-6 rounded-xl
+           hover:bg-brand-green-dark active:scale-[0.98] transition-all
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-secondary {
+    @apply bg-[#1e3029] text-gray-300 font-medium py-2 px-4 rounded-xl
+           hover:bg-[#253d34] active:scale-[0.98] transition-all;
+  }
+
+  .input-field {
+    @apply w-full bg-[#131f1b] border border-[#1e3029] rounded-xl px-4 py-3
+           text-gray-100 placeholder:text-gray-500
+           focus:outline-none focus:ring-2 focus:ring-brand-green/30 focus:border-brand-green
+           transition-all;
+  }
+}
+
+/* Recharts responsive container fix */
+.recharts-responsive-container {
+  min-height: 0 !important;
+}

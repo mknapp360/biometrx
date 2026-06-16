@@ -1,0 +1,182 @@
+import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../hooks/useAuth'
+import { useReadings } from '../hooks/useReadings'
+import { useBloodPanels } from '../hooks/useBloodPanels'
+import StatCard, { HeroStatCard } from '../components/StatCard'
+import BPChart from '../components/BPChart'
+import WeightChart from '../components/WeightChart'
+import InsightCard from '../components/InsightCard'
+import BiometrxAgeCard from '../components/BiometrxAgeCard'
+import { getAverageBP, getLatestReading, getWeightChange, generateInsights } from '../utils/calculations'
+import { calculateHealthScore } from '../utils/healthScore'
+import { usePreferences } from '../hooks/usePreferences'
+import { HeartPulse, Activity, Weight, Gauge } from 'lucide-react'
+import { format, differenceInYears } from 'date-fns'
+
+function getGreeting(): string {
+  const h = new Date().getHours()
+  if (h < 12) return 'Good morning'
+  if (h < 18) return 'Good afternoon'
+  return 'Good evening'
+}
+
+export default function Dashboard() {
+  const { user } = useAuth()
+  const { readings, loading } = useReadings()
+  const { panels, loading: panelsLoading } = useBloodPanels()
+  const { formatWeight, weightUnit } = usePreferences()
+  const navigate = useNavigate()
+
+  if (loading || panelsLoading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="w-8 h-8 border-4 border-brand-green border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
+
+  const latest = getLatestReading(readings)
+  const avg7 = getAverageBP(readings, 7)
+  const avg30 = getAverageBP(readings, 30)
+  const weightChange = getWeightChange(readings, 30)
+  const latestMounjaroDose = readings.find(r => r.mounjaro_dose_mg !== null)?.mounjaro_dose_mg
+  const latestSteps = readings.find(r => r.steps !== null)?.steps
+  const latestPanel = panels.length > 0 ? panels[0]! : null
+
+  // Chronological age from user metadata (date_of_birth)
+  const dob = user?.user_metadata?.date_of_birth
+  const chronologicalAge = dob ? differenceInYears(new Date(), new Date(dob)) : null
+
+  const healthScoreResult = calculateHealthScore(latest, latestPanel, chronologicalAge)
+
+  const displayName = user?.user_metadata?.full_name
+    || user?.email?.split('@')[0]
+    || 'there'
+
+  const insights = generateInsights(readings)
+  // Show top 3 insights on dashboard
+  const topInsights = insights.slice(0, 3)
+
+  return (
+    <div className="space-y-4">
+      {/* Greeting header */}
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-xl font-bold text-gray-100">
+            {getGreeting()}, {displayName}
+          </h1>
+          <p className="text-xs text-gray-500 mt-0.5">Here's your health overview for today.</p>
+        </div>
+        <span className="text-[11px] text-gray-500 tabular-nums">
+          {format(new Date(), 'EEE, dd MMM yyyy')}
+        </span>
+      </div>
+
+      {readings.length === 0 ? (
+        <div className="card text-center py-12">
+          <p className="text-gray-400 mb-2">No readings yet</p>
+          <p className="text-sm text-gray-500">Tap <strong className="text-brand-green">Add</strong> to log your first reading.</p>
+        </div>
+      ) : (
+        <>
+          {/* Hero row — 4 key metrics with icons */}
+          <div className="grid grid-cols-4 gap-2">
+            <HeroStatCard
+              label="Blood Pressure"
+              value={latest?.systolic != null && latest?.diastolic != null ? `${latest.systolic}/${latest.diastolic}` : null}
+              icon={HeartPulse}
+              accent={latest?.systolic != null && latest.systolic > 140 ? 'warning' : 'green'}
+            />
+            <HeroStatCard
+              label="Pulse"
+              value={latest?.pulse ?? null}
+              icon={Activity}
+              accent="default"
+            />
+            <HeroStatCard
+              label="Weight"
+              value={latest?.weight_kg ? formatWeight(Number(latest.weight_kg)) : null}
+              unit={weightUnit}
+              icon={Weight}
+              accent="default"
+            />
+            <HeroStatCard
+              label="Cardio Load"
+              value={latest?.map ? Number(latest.map).toFixed(0) : null}
+              icon={Gauge}
+              accent={latest?.map && Number(latest.map) > 100 ? 'warning' : 'default'}
+            />
+          </div>
+
+          {/* Second row — averages and key numbers */}
+          <div className="grid grid-cols-4 gap-2">
+            <StatCard
+              label="7-Day Avg"
+              value={avg7 ? `${avg7.systolic}/${avg7.diastolic}` : null}
+              accent={avg7 && avg7.systolic > 140 ? 'warning' : 'default'}
+            />
+            <StatCard
+              label="30-Day Avg"
+              value={avg30 ? `${avg30.systolic}/${avg30.diastolic}` : null}
+              accent={avg30 && avg30.systolic > 140 ? 'warning' : 'default'}
+            />
+            <StatCard
+              label="Pulse Pressure"
+              value={latest?.pulse_pressure ?? null}
+              accent={latest?.pulse_pressure && latest.pulse_pressure > 60 ? 'warning' : 'default'}
+            />
+            <StatCard
+              label="Mounjaro Dose"
+              value={latestMounjaroDose != null ? Number(latestMounjaroDose).toFixed(1) : null}
+              unit="mg"
+              subtitle={latestMounjaroDose != null ? 'Last recorded' : undefined}
+            />
+          </div>
+
+          {/* Third row — weight change and steps */}
+          <div className="grid grid-cols-2 gap-2">
+            <StatCard
+              label="Weight Change (30d)"
+              value={weightChange !== null ? `${weightChange > 0 ? '+' : ''}${formatWeight(weightChange)}` : null}
+              unit={weightUnit}
+              trend={weightChange !== null ? (weightChange < 0 ? 'down' : weightChange > 0 ? 'up' : 'flat') : null}
+              accent={weightChange !== null && weightChange < 0 ? 'green' : 'default'}
+            />
+            <StatCard
+              label="Step Count"
+              value={latestSteps !== null && latestSteps !== undefined ? latestSteps.toLocaleString() : null}
+              unit="steps"
+              subtitle="Latest reading"
+            />
+          </div>
+
+          {/* BiometRx Age */}
+          <BiometrxAgeCard result={healthScoreResult} chronologicalAge={chronologicalAge} />
+
+          {/* Charts */}
+          <BPChart readings={readings} dataKey="bp" />
+          <WeightChart readings={readings} />
+
+          {/* Inline insights — double-tap to see all */}
+          {topInsights.length > 0 && (
+            <div
+              onDoubleClick={() => navigate('/insights')}
+              className="cursor-pointer"
+            >
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-semibold text-gray-300">Insights</h3>
+                <span className="text-[10px] text-gray-500">Double-tap for all</span>
+              </div>
+              <div className="space-y-2">
+                {topInsights.map((insight, i) => (
+                  <InsightCard key={i} insight={insight} />
+                ))}
+              </div>
+            </div>
+          )}
+
+        </>
+      )}
+    </div>
+  )
+}
