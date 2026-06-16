@@ -1,0 +1,22 @@
+{
+  "name": "BiometRx",
+  "short_name": "BiometRx",
+  "description": "Your personal health dashboard",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#0b1210",
+  "theme_color": "#0b1210",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "/BioMetrxLogo.png",
+      "sizes": "749x266",
+      "type": "image/png"
+    }
+  ]
+}
