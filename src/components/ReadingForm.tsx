@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { format } from 'date-fns'
 import { HeartPulse, X, Check, Footprints } from 'lucide-react'
 import { useHealthConnect } from '../hooks/useHealthConnect'
@@ -168,12 +168,24 @@ export default function ReadingForm({ onSubmit, initialValues, submitLabel = 'Sa
   const [calories, setCalories] = useState(initialValues?.calories?.toString() ?? '')
   const [notes, setNotes] = useState(initialValues?.notes ?? '')
 
-  const { syncTodaySteps, loading: stepsLoading } = useHealthConnect()
+  const { enabled: hcEnabled, loading: stepsLoading, todaySteps, enableHealthConnect, refreshSteps } = useHealthConnect()
+
+  // Auto-fill steps when Health Connect provides them
+  useEffect(() => {
+    if (todaySteps !== null && steps === '') {
+      setSteps(todaySteps.toString())
+    }
+  }, [todaySteps])
 
   const handleSyncSteps = async () => {
-    const todaySteps = await syncTodaySteps()
-    if (todaySteps !== null) {
-      setSteps(todaySteps.toString())
+    if (!hcEnabled) {
+      // First time: opt in and enable
+      const result = await enableHealthConnect()
+      if (result !== null) setSteps(result.toString())
+    } else {
+      // Already enabled: just refresh
+      const result = await refreshSteps()
+      if (result !== null) setSteps(result.toString())
     }
   }
 

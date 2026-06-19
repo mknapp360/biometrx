@@ -1,5 +1,7 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { Capacitor } from '@capacitor/core'
+
+const HC_ENABLED_KEY = 'biometrx_health_connect_enabled'
 
 // Dynamic import to avoid issues on web
 let HealthPlugin: any = null
@@ -17,41 +19,37 @@ export interface StepsData {
   steps: number
 }
 
+function isEnabled(): boolean {
+  return localStorage.getItem(HC_ENABLED_KEY) === 'true'
+}
+
+function setEnabled(val: boolean) {
+  localStorage.setItem(HC_ENABLED_KEY, val ? 'true' : 'false')
+}
+
 export function useHealthConnect() {
-  const [isAvailable, setIsAvailable] = useState(false)
-  const [isAuthorized, setIsAuthorized] = useState(false)
+  const [enabled, setEnabledState] = useState(isEnabled)
   const [loading, setLoading] = useState(false)
+  const [todaySteps, setTodaySteps] = useState<number | null>(null)
 
-  const checkAvailability = useCallback(async () => {
+  const ensureAuthorized = useCallback(async (): Promise<boolean> => {
     if (!Capacitor.isNativePlatform()) return false
     try {
       const Health = await getHealthPlugin()
-      const result = await Health.isAvailable()
-      setIsAvailable(result.available)
-      return result.available
-    } catch {
-      setIsAvailable(false)
-      return false
-    }
-  }, [])
+      const avail = await Health.isAvailable()
+      if (!avail.available) return false
 
-  const requestAccess = useCallback(async () => {
-    if (!Capacitor.isNativePlatform()) return false
-    try {
-      const Health = await getHealthPlugin()
       const result = await Health.requestAuthorization({
         read: ['steps'],
         write: [],
       })
-      setIsAuthorized(result.authorized)
-      return result.authorized
+      return result.readAuthorized?.includes('steps') ?? false
     } catch {
-      setIsAuthorized(false)
       return false
     }
   }, [])
 
-  const getTodaySteps = useCallback(async (): Promise<number | null> => {
+  const fetchTodaySteps = useCallback(async (): Promise<number | null> => {
     if (!Capacitor.isNativePlatform()) return null
     try {
       const Health = await getHealthPlugin()
@@ -62,12 +60,68 @@ export function useHealthConnect() {
         startDate: startOfDay.toISOString(),
         endDate: now.toISOString(),
         dataType: 'steps',
+        bucket: 'day',
+        aggregation: 'sum',
       })
-      return result.value ?? null
+      const samples = result.samples ?? []
+      if (samples.length === 0) return null
+      return Math.round(samples[0].value)
     } catch {
       return null
     }
   }, [])
+
+  // Enable Health Connect (first-time opt-in)
+  const enableHealthConnect = useCallback(async (): Promise<number | null> => {
+    setLoading(true)
+    try {
+      const authorized = await ensureAuthorized()
+      if (!authorized) return null
+
+      setEnabled(true)
+      setEnabledState(true)
+
+      const steps = await fetchTodaySteps()
+      setTodaySteps(steps)
+      return steps
+    } finally {
+      setLoading(false)
+    }
+  }, [ensureAuthorized, fetchTodaySteps])
+
+  // Manual refresh
+  const refreshSteps = useCallback(async (): Promise<number | null> => {
+    setLoading(true)
+    try {
+      const steps = await fetchTodaySteps()
+      setTodaySteps(steps)
+      return steps
+    } finally {
+      setLoading(false)
+    }
+  }, [fetchTodaySteps])
+
+  // Auto-fetch on mount if previously enabled
+  useEffect(() => {
+    if (!enabled || !Capacitor.isNativePlatform()) return
+    let cancelled = false
+
+    const autoSync = async () => {
+      setLoading(true)
+      try {
+        const authorized = await ensureAuthorized()
+        if (!authorized || cancelled) return
+
+        const steps = await fetchTodaySteps()
+        if (!cancelled) setTodaySteps(steps)
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+
+    autoSync()
+    return () => { cancelled = true }
+  }, [enabled, ensureAuthorized, fetchTodaySteps])
 
   const getStepsForDateRange = useCallback(async (
     startDate: Date,
@@ -76,46 +130,28 @@ export function useHealthConnect() {
     if (!Capacitor.isNativePlatform()) return []
     try {
       const Health = await getHealthPlugin()
-      const result = await Health.query({
+      const result = await Health.readSamples({
         startDate: startDate.toISOString(),
         endDate: endDate.toISOString(),
         dataType: 'steps',
       })
-      // Group by day
       const byDay = new Map<string, number>()
-      for (const record of result.records ?? []) {
-        const day = record.startDate.split('T')[0]
-        byDay.set(day, (byDay.get(day) ?? 0) + (record.value ?? 0))
+      for (const sample of result.samples ?? []) {
+        const day = sample.startDate.split('T')[0]
+        byDay.set(day, (byDay.get(day) ?? 0) + (sample.value ?? 0))
       }
-      return Array.from(byDay.entries()).map(([date, steps]) => ({ date, steps }))
+      return Array.from(byDay.entries()).map(([date, steps]) => ({ date, steps: Math.round(steps) }))
     } catch {
       return []
     }
   }, [])
 
-  const syncTodaySteps = useCallback(async (): Promise<number | null> => {
-    setLoading(true)
-    try {
-      const available = await checkAvailability()
-      if (!available) return null
-
-      const authorized = await requestAccess()
-      if (!authorized) return null
-
-      return await getTodaySteps()
-    } finally {
-      setLoading(false)
-    }
-  }, [checkAvailability, requestAccess, getTodaySteps])
-
   return {
-    isAvailable,
-    isAuthorized,
+    enabled,
     loading,
-    checkAvailability,
-    requestAccess,
-    getTodaySteps,
+    todaySteps,
+    enableHealthConnect,
+    refreshSteps,
     getStepsForDateRange,
-    syncTodaySteps,
   }
 }
