@@ -19,9 +19,13 @@ import WeightDrivers from './pages/WeightDrivers'
 export default function App() {
   useEffect(() => {
     if (Capacitor.isNativePlatform()) {
-      StatusBar.setBackgroundColor({ color: '#0a100a' })
-      StatusBar.setStyle({ style: Style.Dark })
-      SplashScreen.hide()
+      try {
+        StatusBar.setBackgroundColor({ color: '#0a100a' })
+        StatusBar.setStyle({ style: Style.Dark })
+      } catch { /* ignore */ }
+      try {
+        SplashScreen.hide()
+      } catch { /* ignore */ }
     }
   }, [])
 

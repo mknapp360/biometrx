@@ -10,6 +10,7 @@ import BiometrxAgeCard from '../components/BiometrxAgeCard'
 import { getAverageBP, getLatestReading, getWeightChange, generateInsights } from '../utils/calculations'
 import { calculateHealthScore } from '../utils/healthScore'
 import { usePreferences } from '../hooks/usePreferences'
+import { useHealthConnect } from '../hooks/useHealthConnect'
 import { HeartPulse, Activity, Weight, Gauge } from 'lucide-react'
 import { format, differenceInYears } from 'date-fns'
 
@@ -25,6 +26,7 @@ export default function Dashboard() {
   const { readings, loading } = useReadings()
   const { panels, loading: panelsLoading } = useBloodPanels()
   const { prefs, formatWeight, weightUnit } = usePreferences()
+  const { todaySteps, enabled: hcEnabled } = useHealthConnect()
   const navigate = useNavigate()
 
   if (loading || panelsLoading) {
@@ -40,7 +42,8 @@ export default function Dashboard() {
   const avg30 = getAverageBP(readings, 30)
   const weightChange = getWeightChange(readings, 30)
   const latestMounjaroDose = readings.find(r => r.mounjaro_dose_mg !== null)?.mounjaro_dose_mg
-  const latestSteps = readings.find(r => r.steps !== null)?.steps
+  const latestStepsFromDb = readings.find(r => r.steps !== null)?.steps
+  const latestSteps = hcEnabled && todaySteps !== null ? todaySteps : latestStepsFromDb
   const latestPanel = panels.length > 0 ? panels[0]! : null
 
   // Chronological age from user metadata (date_of_birth)
@@ -165,7 +168,7 @@ export default function Dashboard() {
               label="Step Count"
               value={latestSteps !== null && latestSteps !== undefined ? latestSteps.toLocaleString() : null}
               unit="steps"
-              subtitle="Latest reading"
+              subtitle={hcEnabled && todaySteps !== null ? 'Today · live' : 'Latest reading'}
             />
           </div>
 

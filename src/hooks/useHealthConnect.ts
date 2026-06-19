@@ -1,18 +1,8 @@
 import { useState, useCallback, useEffect } from 'react'
 import { Capacitor } from '@capacitor/core'
+import { Health } from '@capgo/capacitor-health'
 
 const HC_ENABLED_KEY = 'biometrx_health_connect_enabled'
-
-// Dynamic import to avoid issues on web
-let HealthPlugin: any = null
-
-async function getHealthPlugin() {
-  if (!HealthPlugin) {
-    const mod = await import('@capgo/capacitor-health')
-    HealthPlugin = mod.Health
-  }
-  return HealthPlugin
-}
 
 export interface StepsData {
   date: string
@@ -35,7 +25,6 @@ export function useHealthConnect() {
   const ensureAuthorized = useCallback(async (): Promise<boolean> => {
     if (!Capacitor.isNativePlatform()) return false
     try {
-      const Health = await getHealthPlugin()
       const avail = await Health.isAvailable()
       if (!avail.available) return false
 
@@ -52,9 +41,9 @@ export function useHealthConnect() {
   const fetchTodaySteps = useCallback(async (): Promise<number | null> => {
     if (!Capacitor.isNativePlatform()) return null
     try {
-      const Health = await getHealthPlugin()
       const now = new Date()
       const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+
 
       const result = await Health.queryAggregated({
         startDate: startOfDay.toISOString(),
@@ -65,7 +54,7 @@ export function useHealthConnect() {
       })
       const samples = result.samples ?? []
       if (samples.length === 0) return null
-      return Math.round(samples[0].value)
+      return Math.round(samples[0]!.value)
     } catch {
       return null
     }
@@ -89,25 +78,20 @@ export function useHealthConnect() {
     }
   }, [ensureAuthorized, fetchTodaySteps])
 
-  // Manual refresh
-  const refreshSteps = useCallback(async (): Promise<number | null> => {
-    setLoading(true)
-    try {
-      const steps = await fetchTodaySteps()
-      setTodaySteps(steps)
-      return steps
-    } finally {
-      setLoading(false)
-    }
-  }, [fetchTodaySteps])
+  // Disable Health Connect
+  const disableHealthConnect = useCallback(() => {
+    setEnabled(false)
+    setEnabledState(false)
+    setTodaySteps(null)
+  }, [])
 
-  // Auto-fetch on mount if previously enabled
+  // Auto-fetch on mount and poll every 5 minutes if enabled
   useEffect(() => {
     if (!enabled || !Capacitor.isNativePlatform()) return
     let cancelled = false
 
-    const autoSync = async () => {
-      setLoading(true)
+    const sync = async (showLoading: boolean) => {
+      if (showLoading) setLoading(true)
       try {
         const authorized = await ensureAuthorized()
         if (!authorized || cancelled) return
@@ -115,12 +99,17 @@ export function useHealthConnect() {
         const steps = await fetchTodaySteps()
         if (!cancelled) setTodaySteps(steps)
       } finally {
-        if (!cancelled) setLoading(false)
+        if (!cancelled && showLoading) setLoading(false)
       }
     }
 
-    autoSync()
-    return () => { cancelled = true }
+    sync(true)
+    const interval = setInterval(() => sync(false), 5 * 60 * 1000)
+
+    return () => {
+      cancelled = true
+      clearInterval(interval)
+    }
   }, [enabled, ensureAuthorized, fetchTodaySteps])
 
   const getStepsForDateRange = useCallback(async (
@@ -129,7 +118,6 @@ export function useHealthConnect() {
   ): Promise<StepsData[]> => {
     if (!Capacitor.isNativePlatform()) return []
     try {
-      const Health = await getHealthPlugin()
       const result = await Health.readSamples({
         startDate: startDate.toISOString(),
         endDate: endDate.toISOString(),
@@ -137,7 +125,7 @@ export function useHealthConnect() {
       })
       const byDay = new Map<string, number>()
       for (const sample of result.samples ?? []) {
-        const day = sample.startDate.split('T')[0]
+        const day = sample.startDate.split('T')[0] ?? ''
         byDay.set(day, (byDay.get(day) ?? 0) + (sample.value ?? 0))
       }
       return Array.from(byDay.entries()).map(([date, steps]) => ({ date, steps: Math.round(steps) }))
@@ -146,12 +134,20 @@ export function useHealthConnect() {
     }
   }, [])
 
+  const openSettings = useCallback(async () => {
+    if (!Capacitor.isNativePlatform()) return
+    try {
+      await Health.openHealthConnectSettings()
+    } catch { /* ignore */ }
+  }, [])
+
   return {
     enabled,
     loading,
     todaySteps,
     enableHealthConnect,
-    refreshSteps,
+    disableHealthConnect,
+    openSettings,
     getStepsForDateRange,
   }
 }

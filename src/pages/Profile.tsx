@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { usePreferences, type DateFormat, type UnitSystem } from '../hooks/usePreferences'
-import { LogOut, Check, Download, Share } from 'lucide-react'
+import { useHealthConnect } from '../hooks/useHealthConnect'
+import { LogOut, Check, Download, Share, Heart, Unlink, Settings } from 'lucide-react'
 
 // Capture the beforeinstallprompt event globally
 let deferredPrompt: BeforeInstallPromptEvent | null = null
@@ -30,6 +31,7 @@ function isIOS(): boolean {
 export default function Profile() {
   const { user, signOut } = useAuth()
   const { prefs, updatePrefs } = usePreferences()
+  const { enabled: hcEnabled, loading: hcLoading, enableHealthConnect, disableHealthConnect, openSettings: openHCSettings } = useHealthConnect()
 
   const [name, setName] = useState(prefs.name ?? '')
   const [dob, setDob] = useState(prefs.date_of_birth ?? '')
@@ -170,6 +172,52 @@ export default function Profile() {
             <span className="block text-[11px] mt-0.5 opacity-70">lbs · ft/in</span>
           </button>
         </div>
+      </div>
+
+      {/* Health Connect */}
+      <div className="card">
+        <h2 className="text-xs font-bold text-brand-green uppercase tracking-wider mb-3">Health Connect</h2>
+        {hcEnabled ? (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Heart className="w-4 h-4 text-brand-green" />
+              <p className="text-sm text-gray-300">Linked — steps sync automatically</p>
+            </div>
+            <p className="text-xs text-gray-500">
+              Make sure a fitness app (Google Fit, Samsung Health, etc.) is syncing steps to Health Connect.
+            </p>
+            <div className="flex items-center gap-4">
+              <button
+                onClick={openHCSettings}
+                className="flex items-center gap-1.5 text-xs text-brand-green hover:text-brand-green-light transition-colors"
+              >
+                <Settings className="w-3.5 h-3.5" />
+                Open Health Connect
+              </button>
+              <button
+                onClick={disableHealthConnect}
+                className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-300 transition-colors"
+              >
+                <Unlink className="w-3.5 h-3.5" />
+                Unlink
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <p className="text-xs text-gray-500 mb-3">
+              Link Health Connect to automatically sync your daily step count.
+            </p>
+            <button
+              onClick={enableHealthConnect}
+              disabled={hcLoading}
+              className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-brand-green text-sm font-medium text-white hover:bg-brand-green-dark transition-colors disabled:opacity-50"
+            >
+              <Heart className="w-5 h-5" />
+              {hcLoading ? 'Connecting...' : 'Link to Health Connect'}
+            </button>
+          </>
+        )}
       </div>
 
       {/* Install app */}

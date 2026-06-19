@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { format } from 'date-fns'
-import { HeartPulse, X, Check, Footprints } from 'lucide-react'
+import { HeartPulse, X, Check } from 'lucide-react'
 import { useHealthConnect } from '../hooks/useHealthConnect'
 
 interface ReadingFormProps {
@@ -168,7 +168,7 @@ export default function ReadingForm({ onSubmit, initialValues, submitLabel = 'Sa
   const [calories, setCalories] = useState(initialValues?.calories?.toString() ?? '')
   const [notes, setNotes] = useState(initialValues?.notes ?? '')
 
-  const { enabled: hcEnabled, loading: stepsLoading, todaySteps, enableHealthConnect, refreshSteps } = useHealthConnect()
+  const { todaySteps } = useHealthConnect()
 
   // Auto-fill steps when Health Connect provides them
   useEffect(() => {
@@ -176,18 +176,6 @@ export default function ReadingForm({ onSubmit, initialValues, submitLabel = 'Sa
       setSteps(todaySteps.toString())
     }
   }, [todaySteps])
-
-  const handleSyncSteps = async () => {
-    if (!hcEnabled) {
-      // First time: opt in and enable
-      const result = await enableHealthConnect()
-      if (result !== null) setSteps(result.toString())
-    } else {
-      // Already enabled: just refresh
-      const result = await refreshSteps()
-      if (result !== null) setSteps(result.toString())
-    }
-  }
 
   const bpTaken = systolic !== '' && diastolic !== ''
 
@@ -308,24 +296,13 @@ export default function ReadingForm({ onSubmit, initialValues, submitLabel = 'Sa
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-400 mb-1">Steps</label>
-          <div className="flex gap-2">
-            <input
-              type="number"
-              className="input-field flex-1"
-              placeholder="8000"
-              value={steps}
-              onChange={e => setSteps(e.target.value)}
-            />
-            <button
-              type="button"
-              onClick={handleSyncSteps}
-              disabled={stepsLoading}
-              className="px-3 py-2 bg-brand-green/20 text-brand-green rounded-lg hover:bg-brand-green/30 transition-colors disabled:opacity-50"
-              title="Sync from Health Connect"
-            >
-              <Footprints size={18} className={stepsLoading ? 'animate-pulse' : ''} />
-            </button>
-          </div>
+          <input
+            type="number"
+            className="input-field"
+            placeholder="8000"
+            value={steps}
+            onChange={e => setSteps(e.target.value)}
+          />
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-400 mb-1">Calories</label>

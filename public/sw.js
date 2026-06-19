@@ -1,4 +1,4 @@
-const CACHE_NAME = 'biometrx-v1'
+const CACHE_NAME = 'biometrx-v3'
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
