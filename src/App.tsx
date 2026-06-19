@@ -10,6 +10,7 @@ import History from './pages/History'
 import Insights from './pages/Insights'
 import BloodPanels from './pages/BloodPanels'
 import Profile from './pages/Profile'
+import WeightDrivers from './pages/WeightDrivers'
 
 export default function App() {
   return (
@@ -31,6 +32,7 @@ export default function App() {
               <Route path="/insights" element={<Insights />} />
               <Route path="/bloods" element={<BloodPanels />} />
               <Route path="/profile" element={<Profile />} />
+              <Route path="/weight-drivers" element={<WeightDrivers />} />
             </Route>
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
