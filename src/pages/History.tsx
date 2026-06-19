@@ -81,6 +81,7 @@ export default function History() {
           </div>
           <ReadingForm
             onSubmit={handleUpdate}
+            bpOptional
             initialValues={{
               recorded_at: editing.recorded_at,
               systolic: editing.systolic,
