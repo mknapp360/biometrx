@@ -80,12 +80,21 @@ export default function Dashboard() {
             <p>BioMetRx combines blood pressure, weight, blood tests, medication, and lifestyle data to help you understand your metabolic health over time.</p>
             <p>See trends, uncover correlations, calculate your BioMetRx Age, and monitor the factors linked to metabolic health, healthy ageing, and disease prevention.</p>
           </div>
-          <button
-            onClick={() => navigate('/profile')}
-            className="btn-primary w-full mt-6"
-          >
-            Start by completing your profile
-          </button>
+          {prefs.name || prefs.date_of_birth ? (
+            <button
+              onClick={() => navigate('/add')}
+              className="btn-primary w-full mt-6"
+            >
+              Begin tracking your health
+            </button>
+          ) : (
+            <button
+              onClick={() => navigate('/profile')}
+              className="btn-primary w-full mt-6"
+            >
+              Start by completing your profile
+            </button>
+          )}
         </div>
       ) : (
         <>
