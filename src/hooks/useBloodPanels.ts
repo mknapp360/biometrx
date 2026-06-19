@@ -36,7 +36,7 @@ export function useBloodPanels() {
       .select()
 
     if (error) {
-      console.error('[BiometRx] Blood panel insert failed:', error.message)
+      console.error('[BioMetRx] Blood panel insert failed:', error.message)
       return { error }
     }
     if (!data || data.length === 0) {

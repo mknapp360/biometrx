@@ -24,7 +24,7 @@ export default function Dashboard() {
   const { user } = useAuth()
   const { readings, loading } = useReadings()
   const { panels, loading: panelsLoading } = useBloodPanels()
-  const { formatWeight, weightUnit } = usePreferences()
+  const { prefs, formatWeight, weightUnit } = usePreferences()
   const navigate = useNavigate()
 
   if (loading || panelsLoading) {
@@ -49,7 +49,7 @@ export default function Dashboard() {
 
   const healthScoreResult = calculateHealthScore(latest, latestPanel, chronologicalAge)
 
-  const displayName = user?.user_metadata?.full_name
+  const displayName = prefs.name
     || user?.email?.split('@')[0]
     || 'there'
 
@@ -73,9 +73,19 @@ export default function Dashboard() {
       </div>
 
       {readings.length === 0 ? (
-        <div className="card text-center py-12">
-          <p className="text-gray-400 mb-2">No readings yet</p>
-          <p className="text-sm text-gray-500">Tap <strong className="text-brand-green">Add</strong> to log your first reading.</p>
+        <div className="card py-10 px-6">
+          <h2 className="text-lg font-bold text-gray-100 text-center mb-3">Welcome to BioMetRx</h2>
+          <p className="text-sm text-brand-green font-semibold text-center mb-4">Track the markers that matter.</p>
+          <div className="space-y-3 text-sm text-gray-400 leading-relaxed">
+            <p>BioMetRx combines blood pressure, weight, blood tests, medication, and lifestyle data to help you understand your metabolic health over time.</p>
+            <p>See trends, uncover correlations, calculate your BioMetRx Age, and monitor the factors linked to metabolic health, healthy ageing, and disease prevention.</p>
+          </div>
+          <button
+            onClick={() => navigate('/profile')}
+            className="btn-primary w-full mt-6"
+          >
+            Start by completing your profile
+          </button>
         </div>
       ) : (
         <>
@@ -150,7 +160,7 @@ export default function Dashboard() {
             />
           </div>
 
-          {/* BiometRx Age */}
+          {/* BioMetRx Age */}
           <BiometrxAgeCard result={healthScoreResult} chronologicalAge={chronologicalAge} />
 
           {/* Charts */}

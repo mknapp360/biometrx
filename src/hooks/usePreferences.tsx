@@ -6,12 +6,14 @@ export type DateFormat = 'uk' | 'us'
 export type UnitSystem = 'metric' | 'imperial'
 
 export interface UserPreferences {
+  name: string | null
   date_of_birth: string | null    // ISO date string YYYY-MM-DD
   date_format: DateFormat
   units: UnitSystem
 }
 
 const defaultPrefs: UserPreferences = {
+  name: null,
   date_of_birth: null,
   date_format: 'uk',
   units: 'metric',
@@ -45,6 +47,7 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
     }
     const meta = user.user_metadata ?? {}
     setPrefs({
+      name: meta.name ?? null,
       date_of_birth: meta.date_of_birth ?? null,
       date_format: meta.date_format ?? 'uk',
       units: meta.units ?? 'metric',
@@ -57,6 +60,7 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
     setPrefs(merged)
     await supabase.auth.updateUser({
       data: {
+        name: merged.name,
         date_of_birth: merged.date_of_birth,
         date_format: merged.date_format,
         units: merged.units,

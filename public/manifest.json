@@ -1,6 +1,6 @@
 {
-  "name": "BiometRx",
-  "short_name": "BiometRx",
+  "name": "BioMetRx",
+  "short_name": "BioMetRx",
   "description": "Your personal health dashboard",
   "start_url": "/dashboard",
   "display": "standalone",

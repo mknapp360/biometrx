@@ -1,4 +1,4 @@
--- Health readings table for BiometRx
+-- Health readings table for BioMetRx
 CREATE TABLE IF NOT EXISTS public.health_readings (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,

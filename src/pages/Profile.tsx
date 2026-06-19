@@ -31,6 +31,7 @@ export default function Profile() {
   const { user, signOut } = useAuth()
   const { prefs, updatePrefs } = usePreferences()
 
+  const [name, setName] = useState(prefs.name ?? '')
   const [dob, setDob] = useState(prefs.date_of_birth ?? '')
   const [dateFormat, setDateFormat] = useState<DateFormat>(prefs.date_format)
   const [units, setUnits] = useState<UnitSystem>(prefs.units)
@@ -44,6 +45,7 @@ export default function Profile() {
   }, [])
 
   useEffect(() => {
+    setName(prefs.name ?? '')
     setDob(prefs.date_of_birth ?? '')
     setDateFormat(prefs.date_format)
     setUnits(prefs.units)
@@ -53,6 +55,7 @@ export default function Profile() {
     setSaving(true)
     setSaved(false)
     await updatePrefs({
+      name: name.trim() || null,
       date_of_birth: dob || null,
       date_format: dateFormat,
       units,
@@ -63,6 +66,7 @@ export default function Profile() {
   }
 
   const hasChanges =
+    name !== (prefs.name ?? '') ||
     dob !== (prefs.date_of_birth ?? '') ||
     dateFormat !== prefs.date_format ||
     units !== prefs.units
@@ -86,10 +90,22 @@ export default function Profile() {
         <p className="text-sm text-gray-300">{user?.email}</p>
       </div>
 
+      {/* Name */}
+      <div className="card">
+        <h2 className="text-xs font-bold text-brand-green uppercase tracking-wider mb-3">Name</h2>
+        <input
+          type="text"
+          className="input-field"
+          placeholder="Your first name"
+          value={name}
+          onChange={e => setName(e.target.value)}
+        />
+      </div>
+
       {/* Date of birth */}
       <div className="card">
         <h2 className="text-xs font-bold text-brand-green uppercase tracking-wider mb-3">Date of Birth</h2>
-        <p className="text-xs text-gray-500 mb-2">Used to calculate your BiometRx Age.</p>
+        <p className="text-xs text-gray-500 mb-2">Used to calculate your BioMetRx Age.</p>
         <input
           type="date"
           className="input-field"
@@ -163,7 +179,7 @@ export default function Profile() {
           {showIOSGuide ? (
             <div className="space-y-3">
               <p className="text-xs text-gray-400 leading-relaxed">
-                To install BiometRx on your iPhone or iPad:
+                To install BioMetRx on your iPhone or iPad:
               </p>
               <ol className="text-xs text-gray-400 leading-relaxed space-y-2 list-decimal list-inside">
                 <li>Tap the <Share className="w-4 h-4 inline text-blue-400 -mt-0.5" /> <strong className="text-gray-300">Share</strong> button in Safari's toolbar</li>
@@ -180,7 +196,7 @@ export default function Profile() {
           ) : (
             <>
               <p className="text-xs text-gray-500 mb-3">
-                Install BiometRx to your home screen for a full-screen app experience.
+                Install BioMetRx to your home screen for a full-screen app experience.
               </p>
               <button
                 onClick={async () => {
@@ -210,7 +226,7 @@ export default function Profile() {
         <div className="card">
           <div className="flex items-center gap-2">
             <Check className="w-4 h-4 text-brand-green" />
-            <p className="text-xs text-gray-400">BiometRx is installed on your device.</p>
+            <p className="text-xs text-gray-400">BioMetRx is installed on your device.</p>
           </div>
         </div>
       )}

@@ -48,6 +48,7 @@ export default function AddReading() {
       <h1 className="text-xl font-bold">Add Reading</h1>
       <ReadingForm
         onSubmit={handleSubmit}
+        bpOptional
         afterBP={
           <div className="card border-l-4 border-l-brand-green space-y-3">
             <div className="flex items-center justify-between">
@@ -69,7 +70,7 @@ export default function AddReading() {
               </button>
             </div>
             <p className="text-xs text-gray-400 leading-relaxed">
-              Blood pressure, weight, sleep, medication, and blood tests each tell part of the story. BiometRx combines them to help you understand what is driving your health improvements and where to focus next.
+              Blood pressure, weight, sleep, medication, and blood tests each tell part of the story. BioMetRx combines them to help you understand what is driving your health improvements and where to focus next.
             </p>
           </div>
         }

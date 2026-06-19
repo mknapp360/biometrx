@@ -44,7 +44,7 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center px-4 bg-[#0b1210]">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <img src="/BioMetrxLogo.png" alt="BiometRx" className="h-16 mx-auto mb-4" />
+          <img src="/BioMetrxLogo.png" alt="BioMetRx" className="h-16 mx-auto mb-4" />
           <p className="text-sm text-gray-500 mt-1">Your personal health dashboard</p>
         </div>
 

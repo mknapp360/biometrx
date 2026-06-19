@@ -25,9 +25,9 @@ export default function BiometrxAgeCard({ result, chronologicalAge }: {
   if (score === null) {
     return (
       <div className="card">
-        <h3 className="text-sm font-bold text-gray-200 mb-2">BiometRx Age</h3>
+        <h3 className="text-sm font-bold text-gray-200 mb-2">BioMetRx Age</h3>
         <p className="text-xs text-gray-500">
-          Add BP readings and blood panel results to calculate your BiometRx Age.
+          Add BP readings and blood panel results to calculate your BioMetRx Age.
         </p>
       </div>
     )
@@ -41,12 +41,12 @@ export default function BiometrxAgeCard({ result, chronologicalAge }: {
 
   return (
     <div className="space-y-2">
-      {/* Main row: BiometRx Age + Max Potential Age side by side */}
+      {/* Main row: BioMetRx Age + Max Potential Age side by side */}
       <div className="grid grid-cols-2 gap-2">
 
-        {/* BiometRx Age card */}
+        {/* BioMetRx Age card */}
         <div className="card cursor-pointer" onDoubleClick={() => setExpanded(!expanded)}>
-          <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">BiometRx Age</h3>
+          <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">BioMetRx Age</h3>
           <div className="flex flex-col items-center gap-1">
             <p className={`text-3xl font-bold tabular-nums ${scoreColor}`}>
               {biometrxAge ?? '—'}

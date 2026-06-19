@@ -42,20 +42,20 @@ export function useReadings() {
       pulse_pressure,
     }
 
-    console.log('[BiometRx] Inserting reading:', payload)
+    console.log('[BioMetRx] Inserting reading:', payload)
     const { data, error } = await supabase.from('health_readings').insert(payload).select()
 
     if (error) {
-      console.error('[BiometRx] Insert failed:', error.message, error.details, error.hint)
+      console.error('[BioMetRx] Insert failed:', error.message, error.details, error.hint)
       return { error }
     }
 
     if (!data || data.length === 0) {
-      console.error('[BiometRx] Insert returned no data — likely RLS rejection')
+      console.error('[BioMetRx] Insert returned no data — likely RLS rejection')
       return { error: new Error('Reading was not saved. Please sign out and sign back in.') }
     }
 
-    console.log('[BiometRx] Insert success:', data)
+    console.log('[BioMetRx] Insert success:', data)
     await fetchReadings()
     return { error: null }
   }
