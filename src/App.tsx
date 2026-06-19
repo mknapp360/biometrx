@@ -1,4 +1,8 @@
+import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { Capacitor } from '@capacitor/core'
+import { StatusBar, Style } from '@capacitor/status-bar'
+import { SplashScreen } from '@capacitor/splash-screen'
 import { AuthProvider } from './hooks/useAuth'
 import { PreferencesProvider } from './hooks/usePreferences'
 import ProtectedRoute from './components/ProtectedRoute'
@@ -13,6 +17,14 @@ import Profile from './pages/Profile'
 import WeightDrivers from './pages/WeightDrivers'
 
 export default function App() {
+  useEffect(() => {
+    if (Capacitor.isNativePlatform()) {
+      StatusBar.setBackgroundColor({ color: '#0a100a' })
+      StatusBar.setStyle({ style: Style.Dark })
+      SplashScreen.hide()
+    }
+  }, [])
+
   return (
     <AuthProvider>
       <PreferencesProvider>
