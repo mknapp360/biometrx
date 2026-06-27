@@ -26,7 +26,7 @@ export default function Dashboard() {
   const { readings, loading } = useReadings()
   const { panels, loading: panelsLoading } = useBloodPanels()
   const { prefs, formatWeight, weightUnit } = usePreferences()
-  const { todaySteps, enabled: hcEnabled } = useHealthConnect()
+  const { todaySteps, todayHeartRate, enabled: hcEnabled } = useHealthConnect()
   const navigate = useNavigate()
 
   if (loading || panelsLoading) {
@@ -44,6 +44,25 @@ export default function Dashboard() {
   const latestMounjaroDose = readings.find(r => r.mounjaro_dose_mg !== null)?.mounjaro_dose_mg
   const latestStepsFromDb = readings.find(r => r.steps !== null)?.steps
   const latestSteps = hcEnabled && todaySteps !== null ? todaySteps : latestStepsFromDb
+
+  const now = new Date()
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+
+  // Today's BP: average of the last 2 readings with BP taken today
+  const todayBPReadings = readings.filter(r =>
+    r.systolic !== null && r.diastolic !== null &&
+    new Date(r.recorded_at) >= startOfToday
+  )
+  const last2BP = todayBPReadings.slice(0, 2)
+  const todayBP = last2BP.length > 0 ? {
+    systolic: Math.round(last2BP.reduce((sum, r) => sum + r.systolic!, 0) / last2BP.length),
+    diastolic: Math.round(last2BP.reduce((sum, r) => sum + r.diastolic!, 0) / last2BP.length),
+  } : null
+
+  // Pulse: prefer today's BP entry, then wearable heart rate, then most recent pulse in DB
+  const todayPulseFromDb = readings.find(r => r.pulse !== null && new Date(r.recorded_at) >= startOfToday)?.pulse ?? null
+  const latestPulseFromDb = readings.find(r => r.pulse !== null)?.pulse ?? null
+  const displayPulse = todayPulseFromDb ?? (hcEnabled && todayHeartRate !== null ? todayHeartRate : null) ?? latestPulseFromDb
   const latestPanel = panels.length > 0 ? panels[0]! : null
 
   // Chronological age from user metadata (date_of_birth)
@@ -105,13 +124,13 @@ export default function Dashboard() {
           <div className="grid grid-cols-4 gap-2">
             <HeroStatCard
               label="Blood Pressure"
-              value={latest?.systolic != null && latest?.diastolic != null ? `${latest.systolic}/${latest.diastolic}` : null}
+              value={todayBP ? `${todayBP.systolic}/${todayBP.diastolic}` : null}
               icon={HeartPulse}
-              accent={latest?.systolic != null && latest.systolic > 140 ? 'warning' : 'green'}
+              accent={todayBP && todayBP.systolic > 140 ? 'warning' : 'green'}
             />
             <HeroStatCard
               label="Pulse"
-              value={latest?.pulse ?? null}
+              value={displayPulse}
               icon={Activity}
               accent="default"
             />

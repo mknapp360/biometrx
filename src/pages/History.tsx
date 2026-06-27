@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useReadings } from '../hooks/useReadings'
 import ReadingsTable from '../components/ReadingsTable'
 import ReadingForm, { type ReadingFormData } from '../components/ReadingForm'
@@ -22,6 +22,12 @@ export default function History() {
     if (!result.error) setShowAddPrevious(false)
     return result
   }
+
+  const historyReadings = useMemo(() => {
+    const now = new Date()
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    return readings.filter(r => new Date(r.recorded_at) < startOfToday)
+  }, [readings])
 
   if (loading) {
     return (
@@ -93,6 +99,10 @@ export default function History() {
               sleep_hours: editing.sleep_hours ? Number(editing.sleep_hours) : null,
               steps: editing.steps,
               calories: editing.calories,
+              protein_g: editing.protein_g ? Number(editing.protein_g) : null,
+              fat_g: editing.fat_g ? Number(editing.fat_g) : null,
+              carbs_g: editing.carbs_g ? Number(editing.carbs_g) : null,
+              sugar_g: editing.sugar_g ? Number(editing.sugar_g) : null,
               notes: editing.notes,
             }}
             submitLabel="Update Reading"
@@ -100,7 +110,7 @@ export default function History() {
         </div>
       ) : (
         <ReadingsTable
-          readings={readings}
+          readings={historyReadings}
           onDelete={deleteReading}
           onEdit={setEditing}
         />

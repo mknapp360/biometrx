@@ -1,9 +1,9 @@
 import { NavLink } from 'react-router-dom'
-import { LayoutDashboard, PlusCircle, ClipboardList, UserCircle } from 'lucide-react'
+import { LayoutDashboard, Calendar, ClipboardList, UserCircle } from 'lucide-react'
 
 const navItems = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { to: '/add', label: 'Add', icon: PlusCircle },
+  { to: '/add', label: 'Today', icon: Calendar },
   { to: '/history', label: 'History', icon: ClipboardList },
   { to: '/profile', label: 'Profile', icon: UserCircle },
 ]

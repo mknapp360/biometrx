@@ -2,31 +2,7 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { usePreferences, type DateFormat, type UnitSystem } from '../hooks/usePreferences'
 import { useHealthConnect } from '../hooks/useHealthConnect'
-import { LogOut, Check, Download, Share, Heart, Unlink, Settings } from 'lucide-react'
-
-// Capture the beforeinstallprompt event globally
-let deferredPrompt: BeforeInstallPromptEvent | null = null
-
-interface BeforeInstallPromptEvent extends Event {
-  prompt(): Promise<void>
-  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
-}
-
-if (typeof window !== 'undefined') {
-  window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault()
-    deferredPrompt = e as BeforeInstallPromptEvent
-  })
-}
-
-function isStandalone(): boolean {
-  return window.matchMedia('(display-mode: standalone)').matches
-    || ('standalone' in navigator && (navigator as unknown as { standalone: boolean }).standalone === true)
-}
-
-function isIOS(): boolean {
-  return /iPad|iPhone|iPod/.test(navigator.userAgent) && !('MSStream' in window)
-}
+import { LogOut, Check, Heart, Unlink, Settings } from 'lucide-react'
 
 export default function Profile() {
   const { user, signOut } = useAuth()
@@ -39,12 +15,6 @@ export default function Profile() {
   const [units, setUnits] = useState<UnitSystem>(prefs.units)
   const [saved, setSaved] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [installed, setInstalled] = useState(false)
-  const [showIOSGuide, setShowIOSGuide] = useState(false)
-
-  useEffect(() => {
-    setInstalled(isStandalone())
-  }, [])
 
   useEffect(() => {
     setName(prefs.name ?? '')
@@ -181,10 +151,10 @@ export default function Profile() {
           <div className="space-y-3">
             <div className="flex items-center gap-2">
               <Heart className="w-4 h-4 text-brand-green" />
-              <p className="text-sm text-gray-300">Linked — steps sync automatically</p>
+              <p className="text-sm text-gray-300">Linked — syncing steps and heart rate</p>
             </div>
-            <p className="text-xs text-gray-500">
-              Make sure a fitness app (Google Fit, Samsung Health, etc.) is syncing steps to Health Connect.
+            <p className="text-xs text-gray-500 leading-relaxed">
+              BioMetRx reads from Health Connect automatically. If your wearable data isn't showing up, open your wearable's companion app (Samsung Health, Fitbit, Garmin Connect, etc.) and make sure Health Connect sync is turned on in its settings.
             </p>
             <div className="flex items-center gap-4">
               <button
@@ -205,8 +175,11 @@ export default function Profile() {
           </div>
         ) : (
           <>
-            <p className="text-xs text-gray-500 mb-3">
-              Link Health Connect to automatically sync your daily step count.
+            <p className="text-xs text-gray-500 leading-relaxed mb-2">
+              Health Connect is Android's universal health hub. Linking it lets BioMetRx automatically pull your daily steps and heart rate — whether from your phone or a wearable.
+            </p>
+            <p className="text-xs text-gray-500 leading-relaxed mb-4">
+              Works with any wearable that syncs to Android — Samsung Galaxy Watch, Fitbit, Garmin, Wear OS, and more. Just make sure Health Connect sync is enabled in your wearable's companion app.
             </p>
             <button
               onClick={enableHealthConnect}
@@ -219,65 +192,6 @@ export default function Profile() {
           </>
         )}
       </div>
-
-      {/* Install app */}
-      {!installed && (
-        <div className="card">
-          <h2 className="text-xs font-bold text-brand-green uppercase tracking-wider mb-3">Install App</h2>
-          {showIOSGuide ? (
-            <div className="space-y-3">
-              <p className="text-xs text-gray-400 leading-relaxed">
-                To install BioMetRx on your iPhone or iPad:
-              </p>
-              <ol className="text-xs text-gray-400 leading-relaxed space-y-2 list-decimal list-inside">
-                <li>Tap the <Share className="w-4 h-4 inline text-blue-400 -mt-0.5" /> <strong className="text-gray-300">Share</strong> button in Safari's toolbar</li>
-                <li>Scroll down and tap <strong className="text-gray-300">"Add to Home Screen"</strong></li>
-                <li>Tap <strong className="text-gray-300">"Add"</strong> in the top right</li>
-              </ol>
-              <button
-                onClick={() => setShowIOSGuide(false)}
-                className="text-xs text-gray-500 hover:text-gray-300"
-              >
-                Dismiss
-              </button>
-            </div>
-          ) : (
-            <>
-              <p className="text-xs text-gray-500 mb-3">
-                Install BioMetRx to your home screen for a full-screen app experience.
-              </p>
-              <button
-                onClick={async () => {
-                  if (deferredPrompt) {
-                    await deferredPrompt.prompt()
-                    const { outcome } = await deferredPrompt.userChoice
-                    if (outcome === 'accepted') setInstalled(true)
-                    deferredPrompt = null
-                  } else if (isIOS()) {
-                    setShowIOSGuide(true)
-                  } else {
-                    // Fallback: show generic instructions
-                    setShowIOSGuide(true)
-                  }
-                }}
-                className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-[#1e3029] text-sm font-medium text-gray-300 hover:bg-[#253d34] transition-colors"
-              >
-                <Download className="w-5 h-5" />
-                Add to Home Screen
-              </button>
-            </>
-          )}
-        </div>
-      )}
-
-      {installed && (
-        <div className="card">
-          <div className="flex items-center gap-2">
-            <Check className="w-4 h-4 text-brand-green" />
-            <p className="text-xs text-gray-400">BioMetRx is installed on your device.</p>
-          </div>
-        </div>
-      )}
 
       {/* Save button */}
       <button

@@ -11,6 +11,10 @@ export interface HealthReading {
   sleep_hours: number | null
   steps: number | null
   calories: number | null
+  protein_g: number | null
+  fat_g: number | null
+  carbs_g: number | null
+  sugar_g: number | null
   notes: string | null
   map: number | null
   pulse_pressure: number | null
@@ -30,6 +34,10 @@ export interface HealthReadingInsert {
   sleep_hours?: number | null
   steps?: number | null
   calories?: number | null
+  protein_g?: number | null
+  fat_g?: number | null
+  carbs_g?: number | null
+  sugar_g?: number | null
   notes?: string | null
   map?: number | null
   pulse_pressure?: number | null
@@ -46,6 +54,10 @@ export interface HealthReadingUpdate {
   sleep_hours?: number | null
   steps?: number | null
   calories?: number | null
+  protein_g?: number | null
+  fat_g?: number | null
+  carbs_g?: number | null
+  sugar_g?: number | null
   notes?: string | null
   map?: number | null
   pulse_pressure?: number | null

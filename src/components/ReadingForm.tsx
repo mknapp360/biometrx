@@ -1,11 +1,20 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { format } from 'date-fns'
 import { HeartPulse, X, Check } from 'lucide-react'
 import { useHealthConnect } from '../hooks/useHealthConnect'
 
+export interface NutritionFill {
+  calories: number | null
+  protein_g: number | null
+  fat_g: number | null
+  carbs_g: number | null
+  sugar_g: number | null
+}
+
 interface ReadingFormProps {
   onSubmit: (data: ReadingFormData) => Promise<{ error: unknown }>
   initialValues?: Partial<ReadingFormData>
+  nutritionFill?: NutritionFill | null
   submitLabel?: string
   bpOptional?: boolean
   afterBP?: React.ReactNode
@@ -22,6 +31,10 @@ export interface ReadingFormData {
   sleep_hours: number | null
   steps: number | null
   calories: number | null
+  protein_g: number | null
+  fat_g: number | null
+  carbs_g: number | null
+  sugar_g: number | null
   notes: string | null
 }
 
@@ -151,7 +164,7 @@ function BPModal({ onConfirm, onClose }: {
   )
 }
 
-export default function ReadingForm({ onSubmit, initialValues, submitLabel = 'Save Reading', bpOptional = false, afterBP }: ReadingFormProps) {
+export default function ReadingForm({ onSubmit, initialValues, nutritionFill, submitLabel = 'Save Reading', bpOptional = false, afterBP }: ReadingFormProps) {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showBPModal, setShowBPModal] = useState(false)
@@ -166,9 +179,14 @@ export default function ReadingForm({ onSubmit, initialValues, submitLabel = 'Sa
   const [sleepHours, setSleepHours] = useState(initialValues?.sleep_hours?.toString() ?? '')
   const [steps, setSteps] = useState(initialValues?.steps?.toString() ?? '')
   const [calories, setCalories] = useState(initialValues?.calories?.toString() ?? '')
+  const [proteinG, setProteinG] = useState(initialValues?.protein_g?.toString() ?? '')
+  const [fatG, setFatG] = useState(initialValues?.fat_g?.toString() ?? '')
+  const [carbsG, setCarbsG] = useState(initialValues?.carbs_g?.toString() ?? '')
+  const [sugarG, setSugarG] = useState(initialValues?.sugar_g?.toString() ?? '')
   const [notes, setNotes] = useState(initialValues?.notes ?? '')
 
   const { todaySteps } = useHealthConnect()
+  const prevFillRef = useRef<NutritionFill | null | undefined>(undefined)
 
   // Auto-fill steps when Health Connect provides them
   useEffect(() => {
@@ -176,6 +194,17 @@ export default function ReadingForm({ onSubmit, initialValues, submitLabel = 'Sa
       setSteps(todaySteps.toString())
     }
   }, [todaySteps])
+
+  // Fill nutrition fields when AI result arrives
+  useEffect(() => {
+    if (!nutritionFill || nutritionFill === prevFillRef.current) return
+    prevFillRef.current = nutritionFill
+    if (nutritionFill.calories !== null) setCalories(nutritionFill.calories.toString())
+    if (nutritionFill.protein_g !== null) setProteinG(nutritionFill.protein_g.toString())
+    if (nutritionFill.fat_g !== null) setFatG(nutritionFill.fat_g.toString())
+    if (nutritionFill.carbs_g !== null) setCarbsG(nutritionFill.carbs_g.toString())
+    if (nutritionFill.sugar_g !== null) setSugarG(nutritionFill.sugar_g.toString())
+  }, [nutritionFill])
 
   const bpTaken = systolic !== '' && diastolic !== ''
 
@@ -215,6 +244,10 @@ export default function ReadingForm({ onSubmit, initialValues, submitLabel = 'Sa
       sleep_hours: sleepHours ? parseFloat(sleepHours) : null,
       steps: steps ? parseInt(steps) : null,
       calories: calories ? parseInt(calories) : null,
+      protein_g: proteinG ? parseFloat(proteinG) : null,
+      fat_g: fatG ? parseFloat(fatG) : null,
+      carbs_g: carbsG ? parseFloat(carbsG) : null,
+      sugar_g: sugarG ? parseFloat(sugarG) : null,
       notes: notes.trim() || null,
     }
 
@@ -312,6 +345,53 @@ export default function ReadingForm({ onSubmit, initialValues, submitLabel = 'Sa
             placeholder="2000"
             value={calories}
             onChange={e => setCalories(e.target.value)}
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-sm font-medium text-gray-400 mb-1">Protein (g)</label>
+          <input
+            type="number"
+            step="0.1"
+            className="input-field"
+            placeholder="50"
+            value={proteinG}
+            onChange={e => setProteinG(e.target.value)}
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-400 mb-1">Fat (g)</label>
+          <input
+            type="number"
+            step="0.1"
+            className="input-field"
+            placeholder="70"
+            value={fatG}
+            onChange={e => setFatG(e.target.value)}
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-400 mb-1">Carbs (g)</label>
+          <input
+            type="number"
+            step="0.1"
+            className="input-field"
+            placeholder="200"
+            value={carbsG}
+            onChange={e => setCarbsG(e.target.value)}
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-400 mb-1">Sugar (g)</label>
+          <input
+            type="number"
+            step="0.1"
+            className="input-field"
+            placeholder="40"
+            value={sugarG}
+            onChange={e => setSugarG(e.target.value)}
           />
         </div>
       </div>
