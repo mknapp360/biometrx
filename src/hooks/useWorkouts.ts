@@ -36,6 +36,16 @@ export function useWorkouts() {
     return { error }
   }, [fetchWorkouts])
 
+  const addWorkout = useCallback(async (session: Omit<WorkoutSessionInsert, 'user_id'>) => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { error: new Error('Not authenticated') }
+    const { error } = await supabase
+      .from('workout_sessions')
+      .insert({ ...session, user_id: user.id })
+    if (!error) await fetchWorkouts()
+    return { error }
+  }, [fetchWorkouts])
+
   // Last 7 days for resilience scoring
   const recentWorkouts = workouts.filter(w => {
     const sevenDaysAgo = new Date()
@@ -43,5 +53,5 @@ export function useWorkouts() {
     return new Date(w.workout_date) >= sevenDaysAgo
   })
 
-  return { workouts, recentWorkouts, loading, upsertWorkouts, refresh: fetchWorkouts }
+  return { workouts, recentWorkouts, loading, upsertWorkouts, addWorkout, refresh: fetchWorkouts }
 }

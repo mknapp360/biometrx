@@ -9,6 +9,7 @@ export interface NutritionFill {
   fat_g: number | null
   carbs_g: number | null
   sugar_g: number | null
+  alcohol_units: number | null
 }
 
 interface ReadingFormProps {
@@ -218,6 +219,7 @@ export default function ReadingForm({ onSubmit, initialValues, nutritionFill, su
     if (nutritionFill.fat_g !== null) setFatG(nutritionFill.fat_g.toString())
     if (nutritionFill.carbs_g !== null) setCarbsG(nutritionFill.carbs_g.toString())
     if (nutritionFill.sugar_g !== null) setSugarG(nutritionFill.sugar_g.toString())
+    if (nutritionFill.alcohol_units !== null) setAlcoholUnits(nutritionFill.alcohol_units.toString())
     if ('fibre_g' in nutritionFill && nutritionFill.fibre_g !== null) setFibreG((nutritionFill.fibre_g as number).toString())
     if ('refined_starch_g' in nutritionFill && nutritionFill.refined_starch_g !== null) setRefinedStarchG((nutritionFill.refined_starch_g as number).toString())
   }, [nutritionFill])

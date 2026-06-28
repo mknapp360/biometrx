@@ -17,13 +17,23 @@ export function useWorkoutSync() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return { synced: 0, error: 'Not authenticated' }
 
+      // Ensure workouts permission is granted before querying
+      const authResult = await Health.requestAuthorization({
+        read: ['workouts'],
+        write: [],
+      })
+      const hasPermission = authResult.readAuthorized?.includes('workouts') ?? false
+      if (!hasPermission) return { synced: 0, error: 'Workouts permission not granted in Health Connect' }
+
       const lastSyncStr = localStorage.getItem(LAST_SYNC_KEY)
       const startDate = lastSyncStr
         ? new Date(lastSyncStr).toISOString()
         : new Date(Date.now() - INITIAL_LOOKBACK_DAYS * 86400_000).toISOString()
       const endDate = new Date().toISOString()
 
+      console.log('[WorkoutSync] querying', startDate, '->', endDate)
       const result = await Health.queryWorkouts({ startDate, endDate, limit: 500 })
+      console.log('[WorkoutSync] result', JSON.stringify(result))
 
       const sessions = result.workouts ?? []
       if (sessions.length === 0) {

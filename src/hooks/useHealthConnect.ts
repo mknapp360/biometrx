@@ -93,16 +93,16 @@ export function useHealthConnect() {
     try {
       const now = new Date()
       const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-      const result = await Health.queryAggregated({
+      // Android HC does not support queryAggregated for HRV — must use readSamples
+      const result = await Health.readSamples({
         startDate: startOfDay.toISOString(),
         endDate: now.toISOString(),
         dataType: 'heartRateVariability',
-        bucket: 'day',
-        aggregation: 'average',
       })
       const samples = result.samples ?? []
       if (samples.length === 0) return null
-      return Math.round(samples[0]!.value)
+      const avg = samples.reduce((sum, s) => sum + s.value, 0) / samples.length
+      return Math.round(avg)
     } catch {
       return null
     }

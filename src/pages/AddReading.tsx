@@ -1,14 +1,24 @@
 import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Camera, CameraResultType, CameraSource } from '@capacitor/camera'
 import ReadingForm, { type ReadingFormData, type NutritionFill } from '../components/ReadingForm'
 import BloodPanelForm, { type BloodPanelFormData } from '../components/BloodPanelForm'
 import { useReadings } from '../hooks/useReadings'
 import { useBloodPanels } from '../hooks/useBloodPanels'
 import { useHealthConnect } from '../hooks/useHealthConnect'
 import { supabase } from '../lib/supabase'
-import { CheckCircle, TestTubes, X, Sparkles, ChevronRight } from 'lucide-react'
+import { CheckCircle, TestTubes, X, Sparkles, ChevronRight, Camera as CameraIcon } from 'lucide-react'
 
-type NutritionResult = NutritionFill & { _raw: string }
+type NutritionResult = NutritionFill & { _raw: string; _perServing?: NutritionFill }
+
+const PORTION_OPTIONS = [
+  { label: '¼', value: 0.25 },
+  { label: '⅓', value: 0.33 },
+  { label: '½', value: 0.5 },
+  { label: '⅔', value: 0.67 },
+  { label: '¾', value: 0.75 },
+  { label: 'All', value: 1.0 },
+]
 
 export default function AddReading() {
   const { readings, loading, addReading, updateReading } = useReadings()
@@ -25,6 +35,7 @@ export default function AddReading() {
   const [nutritionResult, setNutritionResult] = useState<NutritionResult | null>(null)
   const [nutritionError, setNutritionError] = useState<string | null>(null)
   const [appliedFill, setAppliedFill] = useState<NutritionFill | null>(null)
+  const [portion, setPortion] = useState(1.0)
 
   const todayReading = useMemo(() => {
     const now = new Date()
@@ -117,6 +128,7 @@ export default function AddReading() {
       if (!res.ok) throw new Error('Analysis failed')
       const data = await res.json()
       setNutritionResult({ ...data, _raw: foodText.trim() })
+      setPortion(1.0)
     } catch {
       setNutritionError('Could not analyse food. Please try again.')
     } finally {
@@ -124,22 +136,68 @@ export default function AddReading() {
     }
   }
 
+  const scanLabel = async () => {
+    setNutritionError(null)
+    setNutritionResult(null)
+    try {
+      const photo = await Camera.getPhoto({
+        quality: 85,
+        allowEditing: false,
+        resultType: CameraResultType.Base64,
+        source: CameraSource.Camera,
+      })
+      if (!photo.base64String) return
+      setAnalysing(true)
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/nutrition-ai`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session?.access_token}`,
+          },
+          body: JSON.stringify({
+            image_base64: photo.base64String,
+            mime_type: `image/${photo.format ?? 'jpeg'}`,
+          }),
+        }
+      )
+      if (!res.ok) throw new Error('Label scan failed')
+      const data = await res.json()
+      // Store per-serving values; display will apply portion multiplier
+      setNutritionResult({ ...data, _raw: 'Label scan', _perServing: { ...data } })
+      setPortion(1.0)
+    } catch (e: unknown) {
+      // User cancelled camera — no error needed
+      const msg = e instanceof Error ? e.message : String(e)
+      if (!msg.includes('cancelled') && !msg.includes('cancel') && !msg.includes('dismiss')) {
+        setNutritionError('Could not read label. Try again in better light.')
+      }
+    } finally {
+      setAnalysing(false)
+    }
+  }
+
   const applyNutrition = () => {
     if (!nutritionResult) return
-    // Accumulate: use last applied fill as base, or fall back to today's saved DB values
+    // Use per-serving values from label scan, or result values from text, then apply portion
+    const serving = nutritionResult._perServing ?? nutritionResult
     const base = appliedFill ?? {
       calories: todayReading?.calories ?? null,
       protein_g: todayReading?.protein_g ? Number(todayReading.protein_g) : null,
       fat_g: todayReading?.fat_g ? Number(todayReading.fat_g) : null,
       carbs_g: todayReading?.carbs_g ? Number(todayReading.carbs_g) : null,
       sugar_g: todayReading?.sugar_g ? Number(todayReading.sugar_g) : null,
+      alcohol_units: todayReading?.alcohol_units ? Number(todayReading.alcohol_units) : null,
     }
     setAppliedFill({
-      calories: (base.calories ?? 0) + (nutritionResult.calories ?? 0),
-      protein_g: (base.protein_g ?? 0) + (nutritionResult.protein_g ?? 0),
-      fat_g: (base.fat_g ?? 0) + (nutritionResult.fat_g ?? 0),
-      carbs_g: (base.carbs_g ?? 0) + (nutritionResult.carbs_g ?? 0),
-      sugar_g: (base.sugar_g ?? 0) + (nutritionResult.sugar_g ?? 0),
+      calories: Math.round((base.calories ?? 0) + (serving.calories ?? 0) * portion),
+      protein_g: Math.round(((base.protein_g ?? 0) + (serving.protein_g ?? 0) * portion) * 10) / 10,
+      fat_g: Math.round(((base.fat_g ?? 0) + (serving.fat_g ?? 0) * portion) * 10) / 10,
+      carbs_g: Math.round(((base.carbs_g ?? 0) + (serving.carbs_g ?? 0) * portion) * 10) / 10,
+      sugar_g: Math.round(((base.sugar_g ?? 0) + (serving.sugar_g ?? 0) * portion) * 10) / 10,
+      alcohol_units: Math.round(((base.alcohol_units ?? 0) + (serving.alcohol_units ?? 0) * portion) * 100) / 100,
     })
     setNutritionResult(null)
     setFoodText('')
@@ -166,9 +224,20 @@ export default function AddReading() {
 
       {/* AI food logging card */}
       <div className="card border-l-4 border-l-[#7c3aed] space-y-3">
-        <div className="flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-[#a78bfa]" />
-          <p className="text-sm font-semibold text-gray-300">Log food with AI</p>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-[#a78bfa]" />
+            <p className="text-sm font-semibold text-gray-300">Log food with AI</p>
+          </div>
+          <button
+            type="button"
+            onClick={scanLabel}
+            disabled={analysing}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1e2a3d] text-[#a78bfa] text-xs font-medium hover:bg-[#2a3550] transition-colors disabled:opacity-50"
+          >
+            <CameraIcon className="w-3.5 h-3.5" />
+            Scan label
+          </button>
         </div>
         <p className="text-xs text-gray-500 leading-relaxed">
           Tell BioMetRx what food you ate and it will input your calories and macros.
@@ -195,6 +264,13 @@ export default function AddReading() {
           </button>
         )}
 
+        {analysing && !foodText.trim() && (
+          <div className="flex items-center justify-center gap-2 py-2 text-xs text-[#a78bfa]">
+            <div className="w-4 h-4 border-2 border-[#a78bfa] border-t-transparent rounded-full animate-spin" />
+            Reading label...
+          </div>
+        )}
+
         {nutritionError && (
           <p className="text-xs text-red-400">{nutritionError}</p>
         )}
@@ -202,26 +278,59 @@ export default function AddReading() {
         {nutritionResult && (
           <div className="bg-[#1a2820] rounded-xl p-3 space-y-3">
             <p className="text-xs text-gray-400 italic truncate">"{nutritionResult._raw}"</p>
-            <div className="grid grid-cols-5 gap-1 text-center">
-              {[
-                { label: 'Cal', value: nutritionResult.calories, unit: '' },
-                { label: 'Protein', value: nutritionResult.protein_g, unit: 'g' },
-                { label: 'Fat', value: nutritionResult.fat_g, unit: 'g' },
-                { label: 'Carbs', value: nutritionResult.carbs_g, unit: 'g' },
-                { label: 'Sugar', value: nutritionResult.sugar_g, unit: 'g' },
-              ].map(({ label, value, unit }) => (
-                <div key={label} className="bg-[#0f1d17] rounded-lg py-2 px-1">
-                  <p className="text-xs font-bold text-gray-100">{value}{unit}</p>
-                  <p className="text-[10px] text-gray-500 mt-0.5">{label}</p>
-                </div>
-              ))}
+
+            {/* Portion selector — shown for label scans and always available */}
+            <div className="space-y-1.5">
+              <p className="text-[10px] text-gray-500">Portion</p>
+              <div className="flex gap-1.5">
+                {PORTION_OPTIONS.map(opt => (
+                  <button
+                    key={opt.label}
+                    type="button"
+                    onClick={() => setPortion(opt.value)}
+                    className="flex-1 py-1.5 rounded-lg text-xs font-medium transition-all"
+                    style={{
+                      backgroundColor: portion === opt.value ? '#7c3aed33' : '#0f1d17',
+                      color: portion === opt.value ? '#a78bfa' : '#6b7280',
+                      border: portion === opt.value ? '1px solid #7c3aed66' : '1px solid transparent',
+                    }}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
             </div>
+
+            {/* Macro preview — adjusted for portion */}
+            {(() => {
+              const s = nutritionResult._perServing ?? nutritionResult
+              const hasAlc = (s.alcohol_units ?? 0) > 0
+              const items = [
+                { label: 'Cal', value: Math.round((s.calories ?? 0) * portion), unit: '' },
+                { label: 'Protein', value: Math.round((s.protein_g ?? 0) * portion * 10) / 10, unit: 'g' },
+                { label: 'Fat', value: Math.round((s.fat_g ?? 0) * portion * 10) / 10, unit: 'g' },
+                { label: 'Carbs', value: Math.round((s.carbs_g ?? 0) * portion * 10) / 10, unit: 'g' },
+                { label: 'Sugar', value: Math.round((s.sugar_g ?? 0) * portion * 10) / 10, unit: 'g' },
+                ...(hasAlc ? [{ label: 'Alc', value: Math.round((s.alcohol_units ?? 0) * portion * 100) / 100, unit: 'u' }] : []),
+              ]
+              return (
+                <div className={`grid gap-1 text-center ${hasAlc ? 'grid-cols-6' : 'grid-cols-5'}`}>
+                  {items.map(({ label, value, unit }) => (
+                    <div key={label} className="bg-[#0f1d17] rounded-lg py-2 px-1">
+                      <p className="text-xs font-bold text-gray-100">{value}{unit}</p>
+                      <p className="text-[10px] text-gray-500 mt-0.5">{label}</p>
+                    </div>
+                  ))}
+                </div>
+              )
+            })()}
+
             <button
               type="button"
               onClick={applyNutrition}
               className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-brand-green/10 text-brand-green text-sm font-medium hover:bg-brand-green/20 transition-colors"
             >
-              Apply to today's log
+              Add to today's log
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
