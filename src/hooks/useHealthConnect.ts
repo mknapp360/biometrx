@@ -39,7 +39,7 @@ export function useHealthConnect() {
       if (!avail.available) return false
 
       const result = await Health.requestAuthorization({
-        read: ['steps', 'heartRate', 'heartRateVariability', 'sleep', 'vo2Max'],
+        read: ['steps', 'heartRate', 'heartRateVariability', 'sleep', 'vo2Max', 'workouts'],
         write: [],
       })
       return result.readAuthorized?.includes('steps') ?? false
