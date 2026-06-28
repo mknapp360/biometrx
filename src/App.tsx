@@ -15,6 +15,7 @@ import Insights from './pages/Insights'
 import BloodPanels from './pages/BloodPanels'
 import Profile from './pages/Profile'
 import WeightDrivers from './pages/WeightDrivers'
+import WorkoutHistory from './pages/WorkoutHistory'
 
 export default function App() {
   useEffect(() => {
@@ -49,6 +50,7 @@ export default function App() {
               <Route path="/bloods" element={<BloodPanels />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/weight-drivers" element={<WeightDrivers />} />
+              <Route path="/workouts" element={<WorkoutHistory />} />
             </Route>
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>

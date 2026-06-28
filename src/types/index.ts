@@ -129,3 +129,25 @@ export interface BloodPanel {
 
 export type BloodPanelInsert = Omit<BloodPanel, 'id' | 'created_at' | 'updated_at'>
 export type BloodPanelUpdate = Partial<Omit<BloodPanelInsert, 'user_id'>>
+
+export interface WorkoutSession {
+  id: string
+  user_id: string
+  source_id: string | null
+  workout_date: string
+  start_time: string
+  end_time: string
+  duration_min: number
+  workout_type: string
+  biometrx_category: string
+  distance_m: number | null
+  calories_burned: number | null
+  avg_heart_rate: number | null
+  max_heart_rate: number | null
+  source_app: string | null
+  notes: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type WorkoutSessionInsert = Omit<WorkoutSession, 'id' | 'created_at' | 'updated_at'>

@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useReadings } from '../hooks/useReadings'
@@ -7,11 +8,14 @@ import BPChart from '../components/BPChart'
 import WeightChart from '../components/WeightChart'
 import InsightCard from '../components/InsightCard'
 import BiometrxAgeCard from '../components/BiometrxAgeCard'
+import MetabolicResilienceCard from '../components/MetabolicResilienceCard'
 import { getAverageBP, getLatestReading, getWeightChange, generateInsights } from '../utils/calculations'
 import { calculateHealthScore } from '../utils/healthScore'
 import { usePreferences } from '../hooks/usePreferences'
 import { useHealthConnect } from '../hooks/useHealthConnect'
-import { HeartPulse, Activity, Weight, Droplets } from 'lucide-react'
+import { useWorkouts } from '../hooks/useWorkouts'
+import { useWorkoutSync } from '../hooks/useWorkoutSync'
+import { HeartPulse, Activity, Weight, Droplets, ChevronDown } from 'lucide-react'
 import { format, differenceInYears } from 'date-fns'
 
 const UPF_LABELS = ['None', 'A little', 'Some', 'A lot']
@@ -46,7 +50,21 @@ export default function Dashboard() {
   const { panels, loading: panelsLoading } = useBloodPanels()
   const { prefs, formatWeight, weightUnit } = usePreferences()
   const { todaySteps, todayHeartRate, todayHRV, lastNightSleep, latestVO2Max, enabled: hcEnabled } = useHealthConnect()
+  const { recentWorkouts, refresh: refreshWorkouts } = useWorkouts()
+  const { sync: syncWorkouts } = useWorkoutSync()
+  const hasSynced = useRef(false)
+  const [prOpen, setPrOpen] = useState(false)
   const navigate = useNavigate()
+
+  // Sync workouts from Health Connect on first mount when HC is enabled
+  useEffect(() => {
+    if (hcEnabled && !hasSynced.current) {
+      hasSynced.current = true
+      syncWorkouts().then(({ synced }) => {
+        if (synced > 0) refreshWorkouts()
+      })
+    }
+  }, [hcEnabled, syncWorkouts, refreshWorkouts])
 
   if (loading || panelsLoading) {
     return (
@@ -125,6 +143,22 @@ export default function Dashboard() {
     : todayPressure < 75 ? 'High'
     : 'Very High'
   const pressurePct = todayPressure !== null ? Math.min(100, Math.round(todayPressure)) : 0
+
+  // 7-day average daily steps (from DB readings)
+  const sevenDaysAgo = new Date()
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+  const recentStepReadings = readings.filter(r => r.steps !== null && new Date(r.recorded_at) >= sevenDaysAgo)
+  const avgDailySteps = recentStepReadings.length > 0
+    ? Math.round(recentStepReadings.reduce((sum, r) => sum + r.steps!, 0) / recentStepReadings.length)
+    : (hcEnabled && todaySteps !== null ? todaySteps : 0)
+
+  // Avg deep/REM from last 7 days DB readings (fallback from HC)
+  const avgDeepSleepMin7 = recentStepReadings.filter(r => r.sleep_deep_min !== null).length > 0
+    ? Math.round(recentStepReadings.filter(r => r.sleep_deep_min !== null).reduce((sum, r) => sum + r.sleep_deep_min!, 0) / recentStepReadings.filter(r => r.sleep_deep_min !== null).length)
+    : (hcEnabled && lastNightSleep !== null ? lastNightSleep.deepMin : null)
+  const avgRemSleepMin7 = recentStepReadings.filter(r => r.sleep_rem_min !== null).length > 0
+    ? Math.round(recentStepReadings.filter(r => r.sleep_rem_min !== null).reduce((sum, r) => sum + r.sleep_rem_min!, 0) / recentStepReadings.filter(r => r.sleep_rem_min !== null).length)
+    : (hcEnabled && lastNightSleep !== null ? lastNightSleep.remMin : null)
 
   // Chronological age from user metadata
   const dob = user?.user_metadata?.date_of_birth
@@ -282,57 +316,85 @@ export default function Dashboard() {
             </div>
           )}
 
-          {/* Today's Metabolic Pressure */}
-          {todayDietReading && todayPressure !== null && (
-            <div className="card space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-sm font-bold text-gray-200">Today's Metabolic Pressure</h3>
-                  <p className="text-[10px] text-gray-500">Diet quality signal for today</p>
-                </div>
-                <span className="text-xs font-bold px-2.5 py-1 rounded-full" style={{ color: pressureColor, backgroundColor: pressureColor + '22' }}>
-                  {pressureLabel}
-                </span>
-              </div>
-
-              {/* Pressure bar */}
-              <div>
-                <div className="flex justify-between text-[10px] text-gray-500 mb-1">
-                  <span>Low pressure</span>
-                  <span>High pressure</span>
-                </div>
-                <div className="h-2 rounded-full bg-[#1e3029] overflow-hidden">
-                  <div
-                    className="h-full rounded-full transition-all duration-500"
-                    style={{ width: `${pressurePct}%`, backgroundColor: pressureColor }}
-                  />
-                </div>
-              </div>
-
-              {/* Macro breakdown */}
-              <div className="grid grid-cols-5 gap-1 text-center">
-                {[
-                  { label: 'Sugar', value: todayDietReading.sugar_g, unit: 'g', bad: true },
-                  { label: 'Starch', value: todayDietReading.refined_starch_g, unit: 'g', bad: true },
-                  { label: 'Alcohol', value: todayDietReading.alcohol_units, unit: 'u', bad: true },
-                  { label: 'UPF', value: todayDietReading.ultra_processed_score !== null
-                    ? UPF_LABELS[todayDietReading.ultra_processed_score!] ?? null
-                    : null, unit: '', bad: true },
-                  { label: 'Fibre ✓', value: todayDietReading.fibre_g, unit: 'g', bad: false },
-                ].map(({ label, value, unit, bad }) => value !== null ? (
-                  <div key={label} className="bg-[#0f1d17] rounded-lg py-2 px-1">
-                    <p className="text-xs font-bold" style={{ color: bad ? '#f59e0b' : '#29ab00' }}>
-                      {typeof value === 'number' ? `${value}${unit}` : value}
-                    </p>
-                    <p className="text-[10px] text-gray-500 mt-0.5">{label}</p>
-                  </div>
-                ) : null)}
-              </div>
-            </div>
-          )}
-
           {/* BioMetRx Age */}
           <BiometrxAgeCard result={healthScoreResult} chronologicalAge={chronologicalAge} />
+
+          {/* Metabolic Pressure & Resilience — collapsible section */}
+          <div className="rounded-2xl border border-[#1e3029] overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setPrOpen(o => !o)}
+              className="w-full flex items-center justify-between px-4 py-3 bg-[#0f1a15] hover:bg-[#1a2820] transition-colors"
+            >
+              <span className="text-sm font-semibold text-gray-300">Metabolic Pressure &amp; Resilience</span>
+              <ChevronDown
+                className="w-4 h-4 text-gray-500 transition-transform duration-200"
+                style={{ transform: prOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}
+              />
+            </button>
+
+            {prOpen && (
+              <div className="px-3 pb-3 pt-2 space-y-3 bg-[#0a100a]">
+                {/* Today's Metabolic Pressure */}
+                {todayDietReading && todayPressure !== null && (
+                  <div className="card space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-sm font-bold text-gray-200">Today's Metabolic Pressure</h3>
+                        <p className="text-[10px] text-gray-500">Diet quality signal for today</p>
+                      </div>
+                      <span className="text-xs font-bold px-2.5 py-1 rounded-full" style={{ color: pressureColor, backgroundColor: pressureColor + '22' }}>
+                        {pressureLabel}
+                      </span>
+                    </div>
+
+                    <div>
+                      <div className="flex justify-between text-[10px] text-gray-500 mb-1">
+                        <span>Low pressure</span>
+                        <span>High pressure</span>
+                      </div>
+                      <div className="h-2 rounded-full bg-[#1e3029] overflow-hidden">
+                        <div
+                          className="h-full rounded-full transition-all duration-500"
+                          style={{ width: `${pressurePct}%`, backgroundColor: pressureColor }}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-5 gap-1 text-center">
+                      {[
+                        { label: 'Sugar', value: todayDietReading.sugar_g, unit: 'g', bad: true },
+                        { label: 'Starch', value: todayDietReading.refined_starch_g, unit: 'g', bad: true },
+                        { label: 'Alcohol', value: todayDietReading.alcohol_units, unit: 'u', bad: true },
+                        { label: 'UPF', value: todayDietReading.ultra_processed_score !== null
+                          ? UPF_LABELS[todayDietReading.ultra_processed_score!] ?? null
+                          : null, unit: '', bad: true },
+                        { label: 'Fibre ✓', value: todayDietReading.fibre_g, unit: 'g', bad: false },
+                      ].map(({ label, value, unit, bad }) => value !== null ? (
+                        <div key={label} className="bg-[#0f1d17] rounded-lg py-2 px-1">
+                          <p className="text-xs font-bold" style={{ color: bad ? '#f59e0b' : '#29ab00' }}>
+                            {typeof value === 'number' ? `${value}${unit}` : value}
+                          </p>
+                          <p className="text-[10px] text-gray-500 mt-0.5">{label}</p>
+                        </div>
+                      ) : null)}
+                    </div>
+                  </div>
+                )}
+
+                {/* Metabolic Resilience */}
+                <MetabolicResilienceCard
+                  recentWorkouts={recentWorkouts}
+                  avgDailySteps={avgDailySteps}
+                  latestHRV={displayHRV !== null ? Number(displayHRV) : null}
+                  avgDeepSleepMin={avgDeepSleepMin7}
+                  avgRemSleepMin={avgRemSleepMin7}
+                  latestVO2Max={displayVO2Max !== null ? Number(displayVO2Max) : null}
+                  pressureScore={todayPressure}
+                />
+              </div>
+            )}
+          </div>
 
           {/* Charts */}
           <BPChart readings={readings} dataKey="bp" />
