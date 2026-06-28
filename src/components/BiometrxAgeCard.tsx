@@ -100,9 +100,14 @@ export default function BiometrxAgeCard({ result, chronologicalAge }: {
             <div className="space-y-1.5">
               <ScoreBar label="BP" value={breakdown.bp} />
               <ScoreBar label="HbA1c" value={breakdown.hba1c} />
+              <ScoreBar label="Fasting Insulin" value={breakdown.fastingInsulin} />
               <ScoreBar label="Triglycerides" value={breakdown.triglycerides} />
               <ScoreBar label="HDL" value={breakdown.hdl} />
               <ScoreBar label="LDL" value={breakdown.ldl} />
+              <ScoreBar label="ALT" value={breakdown.alt} />
+              <ScoreBar label="GGT" value={breakdown.ggt} />
+              <ScoreBar label="Uric Acid" value={breakdown.uricAcid} />
+              <ScoreBar label="Waist" value={breakdown.waist} />
               <ScoreBar label="Kidney" value={breakdown.kidney} />
               <ScoreBar label="Testosterone" value={breakdown.testosterone} />
             </div>

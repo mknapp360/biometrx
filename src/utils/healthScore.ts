@@ -8,6 +8,11 @@ interface ScoreBreakdown {
   ldl: number | null
   kidney: number | null
   testosterone: number | null
+  fastingInsulin: number | null
+  alt: number | null
+  ggt: number | null
+  uricAcid: number | null
+  waist: number | null
 }
 
 export interface HealthScoreResult {
@@ -82,7 +87,6 @@ function scoreKidney(egfr: number | null, creatinine: number | null): number | n
     return 20
   }
   if (creatinine != null) {
-    // Male reference: 60-110 µmol/L normal
     if (creatinine <= 90) return 100
     if (creatinine <= 110) return 80
     if (creatinine <= 130) return 60
@@ -97,6 +101,52 @@ function scoreTestosterone(val: number): number {
   if (val >= 10) return 80
   if (val >= 7) return 60
   return 40
+}
+
+function scoreFastingInsulin(val: number): number {
+  // pmol/L — key insulin resistance marker
+  if (val < 50) return 100
+  if (val <= 70) return 85
+  if (val <= 100) return 65
+  if (val <= 140) return 40
+  return 20
+}
+
+function scoreALT(val: number): number {
+  // U/L — liver cell stress marker
+  if (val < 25) return 100
+  if (val <= 35) return 85
+  if (val <= 45) return 65
+  if (val <= 60) return 45
+  return 20
+}
+
+function scoreGGT(val: number): number {
+  // U/L — fructose/alcohol liver load marker
+  if (val < 20) return 100
+  if (val <= 35) return 85
+  if (val <= 50) return 65
+  if (val <= 80) return 40
+  return 20
+}
+
+function scoreUricAcid(val: number): number {
+  // mmol/L — fructose metabolism / metabolic pressure
+  if (val < 0.30) return 100
+  if (val <= 0.36) return 85
+  if (val <= 0.42) return 65
+  if (val <= 0.50) return 40
+  return 20
+}
+
+function scoreWaist(val: number): number {
+  // cm — visceral fat proxy (gender-agnostic thresholds)
+  if (val < 80) return 100
+  if (val <= 88) return 85
+  if (val <= 94) return 70
+  if (val <= 102) return 50
+  if (val <= 110) return 35
+  return 20
 }
 
 function ageAdjustmentFromScore(score: number): number {
@@ -120,14 +170,19 @@ export function calculateHealthScore(
   latestPanel: BloodPanel | null,
   chronologicalAge: number | null
 ): HealthScoreResult {
-  const weights = {
-    bp: 0.25,
-    hba1c: 0.20,
-    triglycerides: 0.15,
-    hdl: 0.10,
-    ldl: 0.10,
-    kidney: 0.10,
-    testosterone: 0.10,
+  const weights: Record<keyof ScoreBreakdown, number> = {
+    bp: 0.18,
+    hba1c: 0.13,
+    triglycerides: 0.10,
+    hdl: 0.07,
+    ldl: 0.07,
+    kidney: 0.08,
+    testosterone: 0.07,
+    fastingInsulin: 0.12,
+    alt: 0.06,
+    ggt: 0.06,
+    uricAcid: 0.06,
+    waist: 0.10,
   }
 
   const breakdown: ScoreBreakdown = {
@@ -138,14 +193,20 @@ export function calculateHealthScore(
     ldl: null,
     kidney: null,
     testosterone: null,
+    fastingInsulin: null,
+    alt: null,
+    ggt: null,
+    uricAcid: null,
+    waist: null,
   }
 
-  // BP from latest health reading
   if (latestReading?.systolic != null && latestReading?.diastolic != null) {
     breakdown.bp = scoreBP(latestReading.systolic, latestReading.diastolic)
   }
+  if (latestReading?.waist_cm != null) {
+    breakdown.waist = scoreWaist(Number(latestReading.waist_cm))
+  }
 
-  // Blood panel values
   if (latestPanel) {
     if (latestPanel.hba1c != null) breakdown.hba1c = scoreHba1c(Number(latestPanel.hba1c))
     if (latestPanel.triglycerides != null) breakdown.triglycerides = scoreTriglycerides(Number(latestPanel.triglycerides))
@@ -156,9 +217,12 @@ export function calculateHealthScore(
       latestPanel.creatinine != null ? Number(latestPanel.creatinine) : null
     )
     if (latestPanel.testosterone != null) breakdown.testosterone = scoreTestosterone(Number(latestPanel.testosterone))
+    if (latestPanel.fasting_insulin != null) breakdown.fastingInsulin = scoreFastingInsulin(Number(latestPanel.fasting_insulin))
+    if (latestPanel.alt != null) breakdown.alt = scoreALT(Number(latestPanel.alt))
+    if (latestPanel.ggt != null) breakdown.ggt = scoreGGT(Number(latestPanel.ggt))
+    if (latestPanel.uric_acid != null) breakdown.uricAcid = scoreUricAcid(Number(latestPanel.uric_acid))
   }
 
-  // Count available factors and compute weighted score
   const entries = Object.entries(breakdown) as [keyof ScoreBreakdown, number | null][]
   const available = entries.filter(([, v]) => v !== null)
   const totalFactors = entries.length
@@ -168,7 +232,6 @@ export function calculateHealthScore(
     return { score: null, biometrxAge: null, ageAdjustment: null, breakdown, availableFactors, totalFactors, potential: null }
   }
 
-  // Re-normalise weights to only available factors
   const totalWeight = available.reduce((sum, [key]) => sum + weights[key], 0)
   const score = Math.round(
     available.reduce((sum, [key, val]) => sum + (val! * weights[key] / totalWeight), 0)
@@ -177,8 +240,6 @@ export function calculateHealthScore(
   const ageAdj = ageAdjustmentFromScore(score)
   const biometrxAge = chronologicalAge != null ? chronologicalAge + ageAdj : null
 
-  // --- Potential Age calculation ---
-  // Improvable factors get optimized to 100; kidney and testosterone stay unchanged
   const factorLabels: Record<keyof ScoreBreakdown, string> = {
     bp: 'Blood Pressure',
     hba1c: 'HbA1c',
@@ -187,9 +248,18 @@ export function calculateHealthScore(
     ldl: 'LDL',
     kidney: 'Kidney Function',
     testosterone: 'Testosterone',
+    fastingInsulin: 'Fasting Insulin',
+    alt: 'ALT',
+    ggt: 'GGT',
+    uricAcid: 'Uric Acid',
+    waist: 'Waist',
   }
 
-  const improvable: Set<keyof ScoreBreakdown> = new Set(['bp', 'hba1c', 'triglycerides', 'hdl', 'ldl'])
+  const improvable: Set<keyof ScoreBreakdown> = new Set([
+    'bp', 'hba1c', 'triglycerides', 'hdl', 'ldl',
+    'fastingInsulin', 'alt', 'ggt', 'uricAcid', 'waist',
+  ])
+
   const optimized: ScoreBreakdown = { ...breakdown }
   const opportunities: Opportunity[] = []
 
@@ -199,17 +269,14 @@ export function calculateHealthScore(
       optimized[key] = 100
       opportunities.push({ factor: factorLabels[key], currentScore: val })
     }
-    // kidney and testosterone: leave unchanged
   }
 
-  // Sort opportunities by most room for improvement
   opportunities.sort((a, b) => a.currentScore - b.currentScore)
 
-  const optimizedAvailable = Object.entries(optimized) as [keyof ScoreBreakdown, number | null][]
-  const optimizedFiltered = optimizedAvailable.filter(([, v]) => v !== null)
-  const optTotalWeight = optimizedFiltered.reduce((sum, [key]) => sum + weights[key], 0)
+  const optimizedAvailable = (Object.entries(optimized) as [keyof ScoreBreakdown, number | null][]).filter(([, v]) => v !== null)
+  const optTotalWeight = optimizedAvailable.reduce((sum, [key]) => sum + weights[key], 0)
   const optimizedHealthScore = Math.round(
-    optimizedFiltered.reduce((sum, [key, val]) => sum + (val! * weights[key] / optTotalWeight), 0)
+    optimizedAvailable.reduce((sum, [key, val]) => sum + (val! * weights[key] / optTotalWeight), 0)
   )
 
   const optAgeAdj = ageAdjustmentFromScore(optimizedHealthScore)

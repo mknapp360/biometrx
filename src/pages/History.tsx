@@ -103,6 +103,11 @@ export default function History() {
               fat_g: editing.fat_g ? Number(editing.fat_g) : null,
               carbs_g: editing.carbs_g ? Number(editing.carbs_g) : null,
               sugar_g: editing.sugar_g ? Number(editing.sugar_g) : null,
+              fibre_g: editing.fibre_g ? Number(editing.fibre_g) : null,
+              refined_starch_g: editing.refined_starch_g ? Number(editing.refined_starch_g) : null,
+              alcohol_units: editing.alcohol_units ? Number(editing.alcohol_units) : null,
+              waist_cm: editing.waist_cm ? Number(editing.waist_cm) : null,
+              ultra_processed_score: editing.ultra_processed_score ?? null,
               notes: editing.notes,
             }}
             submitLabel="Update Reading"

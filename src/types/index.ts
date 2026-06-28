@@ -15,6 +15,15 @@ export interface HealthReading {
   fat_g: number | null
   carbs_g: number | null
   sugar_g: number | null
+  fibre_g: number | null
+  refined_starch_g: number | null
+  alcohol_units: number | null
+  waist_cm: number | null
+  ultra_processed_score: number | null
+  hrv_ms: number | null
+  sleep_deep_min: number | null
+  sleep_rem_min: number | null
+  vo2_max: number | null
   notes: string | null
   map: number | null
   pulse_pressure: number | null
@@ -38,6 +47,15 @@ export interface HealthReadingInsert {
   fat_g?: number | null
   carbs_g?: number | null
   sugar_g?: number | null
+  fibre_g?: number | null
+  refined_starch_g?: number | null
+  alcohol_units?: number | null
+  waist_cm?: number | null
+  ultra_processed_score?: number | null
+  hrv_ms?: number | null
+  sleep_deep_min?: number | null
+  sleep_rem_min?: number | null
+  vo2_max?: number | null
   notes?: string | null
   map?: number | null
   pulse_pressure?: number | null
@@ -58,6 +76,15 @@ export interface HealthReadingUpdate {
   fat_g?: number | null
   carbs_g?: number | null
   sugar_g?: number | null
+  fibre_g?: number | null
+  refined_starch_g?: number | null
+  alcohol_units?: number | null
+  waist_cm?: number | null
+  ultra_processed_score?: number | null
+  hrv_ms?: number | null
+  sleep_deep_min?: number | null
+  sleep_rem_min?: number | null
+  vo2_max?: number | null
   notes?: string | null
   map?: number | null
   pulse_pressure?: number | null
@@ -84,8 +111,11 @@ export interface BloodPanel {
   hdl: number | null
   ldl: number | null
   triglycerides: number | null
+  fasting_insulin: number | null
   alt: number | null
   ast: number | null
+  ggt: number | null
+  uric_acid: number | null
   creatinine: number | null
   egfr: number | null
   crp: number | null

@@ -4,6 +4,7 @@ import ReadingForm, { type ReadingFormData, type NutritionFill } from '../compon
 import BloodPanelForm, { type BloodPanelFormData } from '../components/BloodPanelForm'
 import { useReadings } from '../hooks/useReadings'
 import { useBloodPanels } from '../hooks/useBloodPanels'
+import { useHealthConnect } from '../hooks/useHealthConnect'
 import { supabase } from '../lib/supabase'
 import { CheckCircle, TestTubes, X, Sparkles, ChevronRight } from 'lucide-react'
 
@@ -12,6 +13,7 @@ type NutritionResult = NutritionFill & { _raw: string }
 export default function AddReading() {
   const { readings, loading, addReading, updateReading } = useReadings()
   const { addPanel } = useBloodPanels()
+  const { todayHRV, lastNightSleep, latestVO2Max, enabled: hcEnabled } = useHealthConnect()
   const navigate = useNavigate()
   const [saved, setSaved] = useState(false)
   const [showPanelModal, setShowPanelModal] = useState(false)
@@ -51,15 +53,28 @@ export default function AddReading() {
       fat_g: todayReading.fat_g ? Number(todayReading.fat_g) : null,
       carbs_g: todayReading.carbs_g ? Number(todayReading.carbs_g) : null,
       sugar_g: todayReading.sugar_g ? Number(todayReading.sugar_g) : null,
+      fibre_g: todayReading.fibre_g ? Number(todayReading.fibre_g) : null,
+      refined_starch_g: todayReading.refined_starch_g ? Number(todayReading.refined_starch_g) : null,
+      alcohol_units: todayReading.alcohol_units ? Number(todayReading.alcohol_units) : null,
+      waist_cm: todayReading.waist_cm ? Number(todayReading.waist_cm) : null,
+      ultra_processed_score: todayReading.ultra_processed_score ?? null,
       notes: todayReading.notes,
     }
   }, [todayReading])
 
   const handleSubmit = async (data: ReadingFormData) => {
     const isUpdate = !!todayReading
+    // Auto-inject passive HC metrics — only override if wearable has data
+    const enriched = hcEnabled ? {
+      ...data,
+      hrv_ms: todayHRV ?? data.hrv_ms ?? null,
+      sleep_deep_min: lastNightSleep?.deepMin ?? data.sleep_deep_min ?? null,
+      sleep_rem_min: lastNightSleep?.remMin ?? data.sleep_rem_min ?? null,
+      vo2_max: latestVO2Max ?? data.vo2_max ?? null,
+    } : data
     const result = isUpdate
-      ? await updateReading(todayReading!.id, data)
-      : await addReading(data)
+      ? await updateReading(todayReading!.id, enriched)
+      : await addReading(enriched)
     if (!result.error) {
       if (isUpdate) {
         navigate('/dashboard')
@@ -111,12 +126,20 @@ export default function AddReading() {
 
   const applyNutrition = () => {
     if (!nutritionResult) return
+    // Accumulate: use last applied fill as base, or fall back to today's saved DB values
+    const base = appliedFill ?? {
+      calories: todayReading?.calories ?? null,
+      protein_g: todayReading?.protein_g ? Number(todayReading.protein_g) : null,
+      fat_g: todayReading?.fat_g ? Number(todayReading.fat_g) : null,
+      carbs_g: todayReading?.carbs_g ? Number(todayReading.carbs_g) : null,
+      sugar_g: todayReading?.sugar_g ? Number(todayReading.sugar_g) : null,
+    }
     setAppliedFill({
-      calories: nutritionResult.calories,
-      protein_g: nutritionResult.protein_g,
-      fat_g: nutritionResult.fat_g,
-      carbs_g: nutritionResult.carbs_g,
-      sugar_g: nutritionResult.sugar_g,
+      calories: (base.calories ?? 0) + (nutritionResult.calories ?? 0),
+      protein_g: (base.protein_g ?? 0) + (nutritionResult.protein_g ?? 0),
+      fat_g: (base.fat_g ?? 0) + (nutritionResult.fat_g ?? 0),
+      carbs_g: (base.carbs_g ?? 0) + (nutritionResult.carbs_g ?? 0),
+      sugar_g: (base.sugar_g ?? 0) + (nutritionResult.sugar_g ?? 0),
     })
     setNutritionResult(null)
     setFoodText('')
@@ -148,7 +171,7 @@ export default function AddReading() {
           <p className="text-sm font-semibold text-gray-300">Log food with AI</p>
         </div>
         <p className="text-xs text-gray-500 leading-relaxed">
-          Tell the AI what you ate and it will estimate your calories and macros.
+          Tell BioMetRx what food you ate and it will input your calories and macros.
         </p>
 
         <input
@@ -160,7 +183,7 @@ export default function AddReading() {
           onKeyDown={e => { if (e.key === 'Enter') analyseFood() }}
         />
 
-        {foodText.trim() && !listening && (
+        {foodText.trim() && (
           <button
             type="button"
             onClick={analyseFood}

@@ -11,8 +11,11 @@ import { getAverageBP, getLatestReading, getWeightChange, generateInsights } fro
 import { calculateHealthScore } from '../utils/healthScore'
 import { usePreferences } from '../hooks/usePreferences'
 import { useHealthConnect } from '../hooks/useHealthConnect'
-import { HeartPulse, Activity, Weight, Gauge } from 'lucide-react'
+import { HeartPulse, Activity, Weight, Droplets } from 'lucide-react'
 import { format, differenceInYears } from 'date-fns'
+
+const UPF_LABELS = ['None', 'A little', 'Some', 'A lot']
+const UPF_COLORS = ['#29ab00', '#FFC20A', '#f97316', '#DC2626']
 
 function getGreeting(): string {
   const h = new Date().getHours()
@@ -21,12 +24,28 @@ function getGreeting(): string {
   return 'Good evening'
 }
 
+function pressureScore(r: {
+  sugar_g?: number | null
+  refined_starch_g?: number | null
+  alcohol_units?: number | null
+  ultra_processed_score?: number | null
+  fibre_g?: number | null
+}): number {
+  return Math.max(0,
+    (r.sugar_g != null ? Number(r.sugar_g) * 0.45 : 0) +
+    (r.refined_starch_g != null ? Number(r.refined_starch_g) * 0.18 : 0) +
+    (r.alcohol_units != null ? Number(r.alcohol_units) * 9 : 0) +
+    (r.ultra_processed_score != null ? Number(r.ultra_processed_score) * 18 : 0) -
+    (r.fibre_g != null ? Number(r.fibre_g) * 0.5 : 0)
+  )
+}
+
 export default function Dashboard() {
   const { user } = useAuth()
   const { readings, loading } = useReadings()
   const { panels, loading: panelsLoading } = useBloodPanels()
   const { prefs, formatWeight, weightUnit } = usePreferences()
-  const { todaySteps, todayHeartRate, enabled: hcEnabled } = useHealthConnect()
+  const { todaySteps, todayHeartRate, todayHRV, lastNightSleep, latestVO2Max, enabled: hcEnabled } = useHealthConnect()
   const navigate = useNavigate()
 
   if (loading || panelsLoading) {
@@ -59,24 +78,62 @@ export default function Dashboard() {
     diastolic: Math.round(last2BP.reduce((sum, r) => sum + r.diastolic!, 0) / last2BP.length),
   } : null
 
-  // Pulse: prefer today's BP entry, then wearable heart rate, then most recent pulse in DB
+  // Pulse: prefer today's DB entry, then wearable, then most recent DB
   const todayPulseFromDb = readings.find(r => r.pulse !== null && new Date(r.recorded_at) >= startOfToday)?.pulse ?? null
   const latestPulseFromDb = readings.find(r => r.pulse !== null)?.pulse ?? null
   const displayPulse = todayPulseFromDb ?? (hcEnabled && todayHeartRate !== null ? todayHeartRate : null) ?? latestPulseFromDb
+
+  // Glucose: prefer today, fall back to most recent
+  const todayGlucose = readings.find(r => r.glucose_mmol !== null && new Date(r.recorded_at) >= startOfToday)?.glucose_mmol ?? null
+  const latestGlucose = readings.find(r => r.glucose_mmol !== null)?.glucose_mmol ?? null
+  const displayGlucose = todayGlucose ?? latestGlucose
+
+  // Waist: most recent
+  const latestWaist = readings.find(r => r.waist_cm !== null)?.waist_cm ?? null
+
   const latestPanel = panels.length > 0 ? panels[0]! : null
 
-  // Chronological age from user metadata (date_of_birth)
+  // Recovery & Fitness
+  const displayHRV = hcEnabled && todayHRV !== null ? todayHRV : (readings.find(r => r.hrv_ms !== null)?.hrv_ms ?? null)
+  const displayDeepMin = hcEnabled && lastNightSleep !== null ? lastNightSleep.deepMin : (readings.find(r => r.sleep_deep_min !== null)?.sleep_deep_min ?? null)
+  const displayRemMin = hcEnabled && lastNightSleep !== null ? lastNightSleep.remMin : (readings.find(r => r.sleep_rem_min !== null)?.sleep_rem_min ?? null)
+  const displayVO2Max = hcEnabled && latestVO2Max !== null ? latestVO2Max : (readings.find(r => r.vo2_max !== null)?.vo2_max ?? null)
+  const hasRecoveryData = displayHRV !== null || displayDeepMin !== null || displayRemMin !== null || displayVO2Max !== null
+
+  const fmtMin = (min: number) => {
+    const h = Math.floor(min / 60)
+    const m = min % 60
+    return h > 0 ? `${h}h ${m}m` : `${m}m`
+  }
+
+  // Today's dietary pressure card
+  const todayDietReading = readings.find(r => {
+    if (new Date(r.recorded_at) < startOfToday) return false
+    return r.sugar_g != null || r.refined_starch_g != null || r.alcohol_units != null ||
+      r.ultra_processed_score != null || r.fibre_g != null
+  }) ?? null
+
+  const todayPressure = todayDietReading ? pressureScore(todayDietReading) : null
+  const pressureColor = todayPressure === null ? '#6b7280'
+    : todayPressure < 25 ? '#29ab00'
+    : todayPressure < 50 ? '#FFC20A'
+    : todayPressure < 75 ? '#f97316'
+    : '#DC2626'
+  const pressureLabel = todayPressure === null ? null
+    : todayPressure < 25 ? 'Low'
+    : todayPressure < 50 ? 'Moderate'
+    : todayPressure < 75 ? 'High'
+    : 'Very High'
+  const pressurePct = todayPressure !== null ? Math.min(100, Math.round(todayPressure)) : 0
+
+  // Chronological age from user metadata
   const dob = user?.user_metadata?.date_of_birth
   const chronologicalAge = dob ? differenceInYears(new Date(), new Date(dob)) : null
 
   const healthScoreResult = calculateHealthScore(latest, latestPanel, chronologicalAge)
 
-  const displayName = prefs.name
-    || user?.email?.split('@')[0]
-    || 'there'
-
+  const displayName = prefs.name || user?.email?.split('@')[0] || 'there'
   const insights = generateInsights(readings)
-  // Show top 3 insights on dashboard
   const topInsights = insights.slice(0, 3)
 
   return (
@@ -87,7 +144,7 @@ export default function Dashboard() {
           <h1 className="text-xl font-bold text-gray-100">
             {getGreeting()}, {displayName}
           </h1>
-          <p className="text-xs text-gray-500 mt-0.5">Here's your health overview for today.</p>
+          <p className="text-xs text-gray-500 mt-0.5">Here's your metabolic health overview.</p>
         </div>
         <span className="text-[11px] text-gray-500 tabular-nums">
           {format(new Date(), 'EEE, dd MMM yyyy')}
@@ -103,24 +160,18 @@ export default function Dashboard() {
             <p>See trends, uncover correlations, calculate your BioMetRx Age, and monitor the factors linked to metabolic health, healthy ageing, and disease prevention.</p>
           </div>
           {prefs.name || prefs.date_of_birth ? (
-            <button
-              onClick={() => navigate('/add')}
-              className="btn-primary w-full mt-6"
-            >
+            <button onClick={() => navigate('/add')} className="btn-primary w-full mt-6">
               Begin tracking your health
             </button>
           ) : (
-            <button
-              onClick={() => navigate('/profile')}
-              className="btn-primary w-full mt-6"
-            >
+            <button onClick={() => navigate('/profile')} className="btn-primary w-full mt-6">
               Start by completing your profile
             </button>
           )}
         </div>
       ) : (
         <>
-          {/* Hero row — 4 key metrics with icons */}
+          {/* Hero row — BP, Pulse, Weight, Glucose */}
           <div className="grid grid-cols-4 gap-2">
             <HeroStatCard
               label="Blood Pressure"
@@ -142,14 +193,15 @@ export default function Dashboard() {
               accent="default"
             />
             <HeroStatCard
-              label="Cardio Load"
-              value={latest?.map ? Number(latest.map).toFixed(0) : null}
-              icon={Gauge}
-              accent={latest?.map && Number(latest.map) > 100 ? 'warning' : 'default'}
+              label="Glucose"
+              value={displayGlucose != null ? Number(displayGlucose).toFixed(1) : null}
+              unit="mmol/L"
+              icon={Droplets}
+              accent={displayGlucose != null && Number(displayGlucose) > 7 ? 'warning' : 'default'}
             />
           </div>
 
-          {/* Second row — averages and key numbers */}
+          {/* Second row — BP averages, pulse pressure, MAP */}
           <div className="grid grid-cols-4 gap-2">
             <StatCard
               label="7-Day Avg"
@@ -167,29 +219,117 @@ export default function Dashboard() {
               accent={latest?.pulse_pressure && latest.pulse_pressure > 60 ? 'warning' : 'default'}
             />
             <StatCard
-              label="Mounjaro Dose"
-              value={latestMounjaroDose != null ? Number(latestMounjaroDose).toFixed(1) : null}
-              unit="mg"
-              subtitle={latestMounjaroDose != null ? 'Last recorded' : undefined}
+              label="Cardio Load"
+              value={latest?.map ? Number(latest.map).toFixed(0) : null}
+              accent={latest?.map && Number(latest.map) > 100 ? 'warning' : 'default'}
             />
           </div>
 
-          {/* Third row — weight change and steps */}
-          <div className="grid grid-cols-2 gap-2">
+          {/* Third row — weight change, waist, mounjaro, steps */}
+          <div className="grid grid-cols-4 gap-2">
             <StatCard
-              label="Weight Change (30d)"
+              label="Weight Δ 30d"
               value={weightChange !== null ? `${weightChange > 0 ? '+' : ''}${formatWeight(weightChange)}` : null}
               unit={weightUnit}
               trend={weightChange !== null ? (weightChange < 0 ? 'down' : weightChange > 0 ? 'up' : 'flat') : null}
               accent={weightChange !== null && weightChange < 0 ? 'green' : 'default'}
             />
             <StatCard
-              label="Step Count"
+              label="Waist"
+              value={latestWaist != null ? Number(latestWaist).toFixed(1) : null}
+              unit="cm"
+              accent={latestWaist != null && Number(latestWaist) > 94 ? 'warning' : 'default'}
+            />
+            <StatCard
+              label="Mounjaro"
+              value={latestMounjaroDose != null ? Number(latestMounjaroDose).toFixed(1) : null}
+              unit="mg"
+              subtitle={latestMounjaroDose != null ? 'Last dose' : undefined}
+            />
+            <StatCard
+              label="Steps"
               value={latestSteps !== null && latestSteps !== undefined ? latestSteps.toLocaleString() : null}
-              unit="steps"
-              subtitle={hcEnabled && todaySteps !== null ? 'Today · live' : 'Latest reading'}
+              subtitle={hcEnabled && todaySteps !== null ? 'Today · live' : 'Latest'}
             />
           </div>
+
+          {/* Recovery & Fitness — HC-sourced or DB fallback */}
+          {hasRecoveryData && (
+            <div className="grid grid-cols-4 gap-2">
+              <StatCard
+                label="HRV"
+                value={displayHRV !== null ? Math.round(Number(displayHRV)) : null}
+                unit="ms"
+                subtitle={hcEnabled && todayHRV !== null ? 'Today · live' : undefined}
+                accent={displayHRV !== null && Number(displayHRV) < 30 ? 'warning' : 'default'}
+              />
+              <StatCard
+                label="Deep Sleep"
+                value={displayDeepMin !== null ? fmtMin(Number(displayDeepMin)) : null}
+                subtitle={hcEnabled && lastNightSleep !== null ? 'Last night' : undefined}
+              />
+              <StatCard
+                label="REM Sleep"
+                value={displayRemMin !== null ? fmtMin(Number(displayRemMin)) : null}
+                subtitle={hcEnabled && lastNightSleep !== null ? 'Last night' : undefined}
+              />
+              <StatCard
+                label="VO₂ Max"
+                value={displayVO2Max !== null ? Number(displayVO2Max).toFixed(1) : null}
+                unit="ml/kg"
+                subtitle={hcEnabled && latestVO2Max !== null ? 'Latest' : undefined}
+              />
+            </div>
+          )}
+
+          {/* Today's Metabolic Pressure */}
+          {todayDietReading && todayPressure !== null && (
+            <div className="card space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-bold text-gray-200">Today's Metabolic Pressure</h3>
+                  <p className="text-[10px] text-gray-500">Diet quality signal for today</p>
+                </div>
+                <span className="text-xs font-bold px-2.5 py-1 rounded-full" style={{ color: pressureColor, backgroundColor: pressureColor + '22' }}>
+                  {pressureLabel}
+                </span>
+              </div>
+
+              {/* Pressure bar */}
+              <div>
+                <div className="flex justify-between text-[10px] text-gray-500 mb-1">
+                  <span>Low pressure</span>
+                  <span>High pressure</span>
+                </div>
+                <div className="h-2 rounded-full bg-[#1e3029] overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all duration-500"
+                    style={{ width: `${pressurePct}%`, backgroundColor: pressureColor }}
+                  />
+                </div>
+              </div>
+
+              {/* Macro breakdown */}
+              <div className="grid grid-cols-5 gap-1 text-center">
+                {[
+                  { label: 'Sugar', value: todayDietReading.sugar_g, unit: 'g', bad: true },
+                  { label: 'Starch', value: todayDietReading.refined_starch_g, unit: 'g', bad: true },
+                  { label: 'Alcohol', value: todayDietReading.alcohol_units, unit: 'u', bad: true },
+                  { label: 'UPF', value: todayDietReading.ultra_processed_score !== null
+                    ? UPF_LABELS[todayDietReading.ultra_processed_score!] ?? null
+                    : null, unit: '', bad: true },
+                  { label: 'Fibre ✓', value: todayDietReading.fibre_g, unit: 'g', bad: false },
+                ].map(({ label, value, unit, bad }) => value !== null ? (
+                  <div key={label} className="bg-[#0f1d17] rounded-lg py-2 px-1">
+                    <p className="text-xs font-bold" style={{ color: bad ? '#f59e0b' : '#29ab00' }}>
+                      {typeof value === 'number' ? `${value}${unit}` : value}
+                    </p>
+                    <p className="text-[10px] text-gray-500 mt-0.5">{label}</p>
+                  </div>
+                ) : null)}
+              </div>
+            </div>
+          )}
 
           {/* BioMetRx Age */}
           <BiometrxAgeCard result={healthScoreResult} chronologicalAge={chronologicalAge} />
@@ -198,7 +338,7 @@ export default function Dashboard() {
           <BPChart readings={readings} dataKey="bp" />
           <WeightChart readings={readings} />
 
-          {/* Inline insights — double-tap to see all */}
+          {/* Insights */}
           {topInsights.length > 0 && (
             <div
               onDoubleClick={() => navigate('/insights')}
@@ -215,7 +355,6 @@ export default function Dashboard() {
               </div>
             </div>
           )}
-
         </>
       )}
     </div>

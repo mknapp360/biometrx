@@ -9,8 +9,11 @@ export interface BloodPanelFormData {
   hdl: number | null
   ldl: number | null
   triglycerides: number | null
+  fasting_insulin: number | null
   alt: number | null
   ast: number | null
+  ggt: number | null
+  uric_acid: number | null
   creatinine: number | null
   egfr: number | null
   crp: number | null
@@ -57,8 +60,11 @@ export default function BloodPanelForm({ onSubmit, initialValues, submitLabel = 
   const [hdl, setHdl] = useState(initialValues?.hdl?.toString() ?? '')
   const [ldl, setLdl] = useState(initialValues?.ldl?.toString() ?? '')
   const [triglycerides, setTriglycerides] = useState(initialValues?.triglycerides?.toString() ?? '')
+  const [fastingInsulin, setFastingInsulin] = useState(initialValues?.fasting_insulin?.toString() ?? '')
   const [alt, setAlt] = useState(initialValues?.alt?.toString() ?? '')
   const [ast, setAst] = useState(initialValues?.ast?.toString() ?? '')
+  const [ggt, setGgt] = useState(initialValues?.ggt?.toString() ?? '')
+  const [uricAcid, setUricAcid] = useState(initialValues?.uric_acid?.toString() ?? '')
   const [creatinine, setCreatinine] = useState(initialValues?.creatinine?.toString() ?? '')
   const [egfr, setEgfr] = useState(initialValues?.egfr?.toString() ?? '')
   const [crp, setCrp] = useState(initialValues?.crp?.toString() ?? '')
@@ -87,8 +93,11 @@ export default function BloodPanelForm({ onSubmit, initialValues, submitLabel = 
       hdl: toNum(hdl),
       ldl: toNum(ldl),
       triglycerides: toNum(triglycerides),
+      fasting_insulin: toNum(fastingInsulin),
       alt: toNum(alt),
       ast: toNum(ast),
+      ggt: toNum(ggt),
+      uric_acid: toNum(uricAcid),
       creatinine: toNum(creatinine),
       egfr: toNum(egfr),
       crp: toNum(crp),
@@ -133,6 +142,7 @@ export default function BloodPanelForm({ onSubmit, initialValues, submitLabel = 
         <div className="grid grid-cols-2 gap-3">
           <Field label="HbA1c" unit="mmol/mol" value={hba1c} onChange={setHba1c} />
           <Field label="Glucose" unit="mmol/L" value={glucose} onChange={setGlucose} />
+          <Field label="Fasting Insulin" unit="pmol/L" value={fastingInsulin} onChange={setFastingInsulin} />
         </div>
       </div>
 
@@ -153,6 +163,8 @@ export default function BloodPanelForm({ onSubmit, initialValues, submitLabel = 
         <div className="grid grid-cols-2 gap-3">
           <Field label="ALT" unit="U/L" value={alt} onChange={setAlt} />
           <Field label="AST" unit="U/L" value={ast} onChange={setAst} />
+          <Field label="GGT" unit="U/L" value={ggt} onChange={setGgt} />
+          <Field label="Uric Acid" unit="mmol/L" value={uricAcid} onChange={setUricAcid} step="0.001" />
         </div>
       </div>
 

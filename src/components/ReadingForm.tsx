@@ -35,6 +35,15 @@ export interface ReadingFormData {
   fat_g: number | null
   carbs_g: number | null
   sugar_g: number | null
+  fibre_g: number | null
+  refined_starch_g: number | null
+  alcohol_units: number | null
+  waist_cm: number | null
+  ultra_processed_score: number | null
+  hrv_ms?: number | null
+  sleep_deep_min?: number | null
+  sleep_rem_min?: number | null
+  vo2_max?: number | null
   notes: string | null
 }
 
@@ -183,6 +192,11 @@ export default function ReadingForm({ onSubmit, initialValues, nutritionFill, su
   const [fatG, setFatG] = useState(initialValues?.fat_g?.toString() ?? '')
   const [carbsG, setCarbsG] = useState(initialValues?.carbs_g?.toString() ?? '')
   const [sugarG, setSugarG] = useState(initialValues?.sugar_g?.toString() ?? '')
+  const [fibreG, setFibreG] = useState(initialValues?.fibre_g?.toString() ?? '')
+  const [refinedStarchG, setRefinedStarchG] = useState(initialValues?.refined_starch_g?.toString() ?? '')
+  const [alcoholUnits, setAlcoholUnits] = useState(initialValues?.alcohol_units?.toString() ?? '')
+  const [waistCm, setWaistCm] = useState(initialValues?.waist_cm?.toString() ?? '')
+  const [ultraProcessedScore, setUltraProcessedScore] = useState<number | null>(initialValues?.ultra_processed_score ?? null)
   const [notes, setNotes] = useState(initialValues?.notes ?? '')
 
   const { todaySteps } = useHealthConnect()
@@ -204,6 +218,8 @@ export default function ReadingForm({ onSubmit, initialValues, nutritionFill, su
     if (nutritionFill.fat_g !== null) setFatG(nutritionFill.fat_g.toString())
     if (nutritionFill.carbs_g !== null) setCarbsG(nutritionFill.carbs_g.toString())
     if (nutritionFill.sugar_g !== null) setSugarG(nutritionFill.sugar_g.toString())
+    if ('fibre_g' in nutritionFill && nutritionFill.fibre_g !== null) setFibreG((nutritionFill.fibre_g as number).toString())
+    if ('refined_starch_g' in nutritionFill && nutritionFill.refined_starch_g !== null) setRefinedStarchG((nutritionFill.refined_starch_g as number).toString())
   }, [nutritionFill])
 
   const bpTaken = systolic !== '' && diastolic !== ''
@@ -248,6 +264,11 @@ export default function ReadingForm({ onSubmit, initialValues, nutritionFill, su
       fat_g: fatG ? parseFloat(fatG) : null,
       carbs_g: carbsG ? parseFloat(carbsG) : null,
       sugar_g: sugarG ? parseFloat(sugarG) : null,
+      fibre_g: fibreG ? parseFloat(fibreG) : null,
+      refined_starch_g: refinedStarchG ? parseFloat(refinedStarchG) : null,
+      alcohol_units: alcoholUnits ? parseFloat(alcoholUnits) : null,
+      waist_cm: waistCm ? parseFloat(waistCm) : null,
+      ultra_processed_score: ultraProcessedScore,
       notes: notes.trim() || null,
     }
 
@@ -292,6 +313,17 @@ export default function ReadingForm({ onSubmit, initialValues, nutritionFill, su
           />
         </div>
         <div>
+          <label className="block text-sm font-medium text-gray-400 mb-1">Waist (cm)</label>
+          <input
+            type="number"
+            step="0.1"
+            className="input-field"
+            placeholder="90.0"
+            value={waistCm}
+            onChange={e => setWaistCm(e.target.value)}
+          />
+        </div>
+        <div>
           <label className="block text-sm font-medium text-gray-400 mb-1">Mounjaro (mg)</label>
           <input
             type="number"
@@ -300,6 +332,17 @@ export default function ReadingForm({ onSubmit, initialValues, nutritionFill, su
             placeholder="2.5"
             value={mounjaroDose}
             onChange={e => setMounjaroDose(e.target.value)}
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-400 mb-1">Alcohol (units)</label>
+          <input
+            type="number"
+            step="0.5"
+            className="input-field"
+            placeholder="0"
+            value={alcoholUnits}
+            onChange={e => setAlcoholUnits(e.target.value)}
           />
         </div>
       </div>
@@ -393,6 +436,56 @@ export default function ReadingForm({ onSubmit, initialValues, nutritionFill, su
             value={sugarG}
             onChange={e => setSugarG(e.target.value)}
           />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-400 mb-1">Fibre (g)</label>
+          <input
+            type="number"
+            step="0.1"
+            className="input-field"
+            placeholder="25"
+            value={fibreG}
+            onChange={e => setFibreG(e.target.value)}
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-400 mb-1">Refined starch (g)</label>
+          <input
+            type="number"
+            step="0.1"
+            className="input-field"
+            placeholder="0"
+            value={refinedStarchG}
+            onChange={e => setRefinedStarchG(e.target.value)}
+          />
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-400 mb-2">Ultra-processed food today</label>
+        <div className="grid grid-cols-4 gap-2">
+          {[
+            { score: 0, label: 'None' },
+            { score: 1, label: 'A little' },
+            { score: 2, label: 'Some' },
+            { score: 3, label: 'A lot' },
+          ].map(({ score, label }) => (
+            <button
+              key={score}
+              type="button"
+              onClick={() => setUltraProcessedScore(ultraProcessedScore === score ? null : score)}
+              className={`py-2 rounded-xl text-xs font-medium transition-colors ${
+                ultraProcessedScore === score
+                  ? score === 0 ? 'bg-brand-green text-white'
+                    : score === 1 ? 'bg-yellow-500/80 text-white'
+                    : score === 2 ? 'bg-orange-500/80 text-white'
+                    : 'bg-red-500/80 text-white'
+                  : 'bg-[#1e3029] text-gray-400 hover:bg-[#253d34]'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
         </div>
       </div>
 
