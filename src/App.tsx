@@ -16,6 +16,7 @@ import BloodPanels from './pages/BloodPanels'
 import Profile from './pages/Profile'
 import WeightDrivers from './pages/WeightDrivers'
 import WorkoutHistory from './pages/WorkoutHistory'
+import OAuthAuthorize from './pages/OAuthAuthorize'
 
 export default function App() {
   useEffect(() => {
@@ -36,6 +37,7 @@ export default function App() {
         <BrowserRouter>
           <Routes>
             <Route path="/login" element={<Login />} />
+            <Route path="/oauth/authorize" element={<OAuthAuthorize />} />
             <Route
               element={
                 <ProtectedRoute>

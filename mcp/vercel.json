@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "https://cddemocpvsvxjlxszgdw.supabase.co/functions/v1/biometrx-mcp/$1"
+    }
+  ]
+}
