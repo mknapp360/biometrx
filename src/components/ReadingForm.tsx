@@ -536,9 +536,11 @@ export default function ReadingForm({ onSubmit, initialValues, nutritionFill, su
         />
       </div>
 
-      <button type="submit" disabled={saving} className="btn-primary w-full">
-        {saving ? 'Saving...' : submitLabel}
-      </button>
+      <div style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
+        <button type="submit" disabled={saving} className="btn-primary w-full">
+          {saving ? 'Saving...' : submitLabel}
+        </button>
+      </div>
     </form>
   )
 }

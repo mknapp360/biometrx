@@ -8,6 +8,15 @@ import {
   Sparkles,
   ChevronRight,
   ShieldCheck,
+  Scale,
+  TrendingUp,
+  Flame,
+  Shield,
+  Fingerprint,
+  Target,
+  Pill,
+  Droplet,
+  RefreshCw,
 } from 'lucide-react'
 
 const features = [
@@ -43,19 +52,82 @@ const features = [
   },
 ]
 
-const steps = [
-  { n: '1', title: 'Create your account', body: 'Sign up free and set your profile — date of birth, units and preferences.' },
-  { n: '2', title: 'Log your numbers', body: 'Add blood pressure, weight, bloods and lifestyle data in seconds, or sync steps from Health Connect.' },
-  { n: '3', title: 'Watch your age drop', body: 'See your BiometRx Age, the factors holding it back, and how many years you could recover.' },
+const pattern = [
+  {
+    icon: Scale,
+    title: 'Weight is only one signal',
+    body: "Weight can change for many reasons. BioMetRx shows you what's driving it.",
+  },
+  {
+    icon: HeartPulse,
+    title: 'Blood pressure matters',
+    body: "It's one of the strongest indicators of long-term health and risk.",
+  },
+  {
+    icon: TrendingUp,
+    title: 'Trends beat snapshots',
+    body: 'Daily and 30-day trends reveal progress that single readings never will.',
+  },
+]
+
+const pillars = [
+  {
+    icon: Flame,
+    title: 'Fuel',
+    body: 'Understand how your body is handling glucose, weight, and medication.',
+  },
+  {
+    icon: HeartPulse,
+    title: 'Pressure',
+    body: 'Track blood pressure and cardiovascular load to reduce long-term risk.',
+  },
+  {
+    icon: Shield,
+    title: 'Resilience',
+    body: 'Improve your BioMetRx Age and increase the years you can live well.',
+  },
+]
+
+const dashboard = [
+  {
+    icon: HeartPulse,
+    title: 'Blood Pressure Trends',
+    body: '7-day and 30-day averages, pulse pressure, and cardiovascular load.',
+  },
+  {
+    icon: Fingerprint,
+    title: 'BioMetRx Age',
+    body: 'A composite score that reflects your metabolic health age.',
+  },
+  {
+    icon: Target,
+    title: 'Max Potential Age',
+    body: 'See how many years are recoverable with better habits.',
+  },
+  {
+    icon: Pill,
+    title: 'Medication Tracking',
+    body: 'Track GLP-1s and other medications with dosage and last dose.',
+  },
+  {
+    icon: Droplet,
+    title: 'Glucose & Labs',
+    body: 'Log glucose and lab markers to see the full metabolic picture.',
+  },
+  {
+    icon: RefreshCw,
+    title: 'Health Connect Ready',
+    body: 'Syncs with Apple Health and Google Health Connect.',
+  },
 ]
 
 export default function Landing() {
   const year = new Date().getFullYear()
 
   return (
-    <div className="min-h-screen bg-[#0b1210] text-gray-100">
+    <div className="min-h-screen bg-[#121919] text-gray-100">
       {/* Nav */}
-      <header className="sticky top-0 z-40 backdrop-blur bg-[#0b1210]/80 border-b border-[#1e3029]">
+      <header className="sticky top-0 z-40 backdrop-blur bg-[#121919]/80 border-b border-[#1e3029]">
         <div className="max-w-6xl mx-auto px-5 h-16 flex items-center justify-between">
           <img src="/BioMetrxLogo.png" alt="BioMetRx" className="h-8" />
           <nav className="hidden md:flex items-center gap-7 text-sm text-gray-300">
@@ -98,9 +170,6 @@ export default function Landing() {
                 Start Tracking Your Health
                 <ChevronRight className="w-4 h-4" />
               </Link>
-              <Link to="/login" className="btn-secondary inline-flex items-center justify-center !py-3 !px-6">
-                See the Dashboard
-              </Link>
             </div>
             <p className="mt-5 flex items-center gap-2 text-xs text-gray-500 justify-center lg:justify-start">
               <ShieldCheck className="w-4 h-4 text-brand-green" />
@@ -113,7 +182,7 @@ export default function Landing() {
             <img
               src="/heroImage.png"
               alt="BioMetRx dashboard on laptop and phone"
-              className="w-full h-auto"
+              className="w-full h-auto lg:scale-125 origin-center"
               loading="eager"
             />
           </div>
@@ -135,15 +204,67 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* How it works */}
-      <section id="how" className="max-w-4xl mx-auto px-5 py-12 scroll-mt-20">
-        <h2 className="text-2xl font-bold text-center mb-2">How it works</h2>
-        <p className="text-center text-gray-500 mb-10">Three steps to a clearer picture of your health.</p>
-        <div className="grid sm:grid-cols-3 gap-4">
-          {steps.map(({ n, title, body }) => (
-            <div key={n} className="card">
-              <div className="w-8 h-8 rounded-full bg-brand-green text-white font-bold flex items-center justify-center mb-3">
-                {n}
+      {/* How it works — tracks the pattern */}
+      <section id="how" className="max-w-6xl mx-auto px-5 py-14 scroll-mt-20">
+        <h2 className="text-2xl sm:text-3xl font-bold text-center tracking-tight">
+          Most health apps track fragments.{' '}
+          <span className="text-brand-green">BioMetRx tracks the pattern.</span>
+        </h2>
+        <p className="mt-3 text-center text-gray-400 max-w-2xl mx-auto leading-relaxed">
+          The scale, your watch, and your blood pressure monitor each tell part of the story.
+          BioMetRx connects the dots so you can understand what's really changing.
+        </p>
+        <div className="mt-10 grid sm:grid-cols-3 gap-4">
+          {pattern.map(({ icon: Icon, title, body }) => (
+            <div key={title} className="card hover:border-brand-green/40 transition-colors">
+              <div className="w-10 h-10 rounded-xl bg-brand-green/10 border border-brand-green/20 flex items-center justify-center mb-3">
+                <Icon className="w-5 h-5 text-brand-green" />
+              </div>
+              <h3 className="font-semibold text-white mb-1.5">{title}</h3>
+              <p className="text-sm text-gray-400 leading-relaxed">{body}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Built for metabolic health */}
+      <section className="border-y border-[#1e3029] bg-[#0e1514]">
+        <div className="max-w-6xl mx-auto px-5 py-14 grid lg:grid-cols-2 gap-10 lg:gap-12 items-start">
+          <div>
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight leading-snug">
+              Built for <span className="text-brand-green">metabolic health,</span>
+              <br />
+              not vanity metrics.
+            </h2>
+            <p className="mt-4 text-gray-400 leading-relaxed max-w-md">
+              BioMetRx is designed around metabolic resilience and deeper signals — not just
+              calories, steps, or appearance. We focus on the markers that drive long-term outcomes.
+            </p>
+          </div>
+          <div className="grid sm:grid-cols-3 gap-6">
+            {pillars.map(({ icon: Icon, title, body }) => (
+              <div key={title}>
+                <div className="w-10 h-10 rounded-xl bg-brand-green/10 border border-brand-green/20 flex items-center justify-center mb-3">
+                  <Icon className="w-5 h-5 text-brand-green" />
+                </div>
+                <h3 className="font-semibold text-white mb-1.5">{title}</h3>
+                <p className="text-sm text-gray-400 leading-relaxed">{body}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* One dashboard */}
+      <section className="max-w-6xl mx-auto px-5 py-14">
+        <h2 className="text-2xl sm:text-3xl font-bold text-center mb-10 tracking-tight">
+          One dashboard. The numbers that matter.
+        </h2>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {dashboard.map(({ icon: Icon, title, body }) => (
+            <div key={title} className="card hover:border-brand-green/40 transition-colors">
+              <div className="w-10 h-10 rounded-xl bg-brand-green/10 border border-brand-green/20 flex items-center justify-center mb-3">
+                <Icon className="w-5 h-5 text-brand-green" />
               </div>
               <h3 className="font-semibold text-white mb-1.5">{title}</h3>
               <p className="text-sm text-gray-400 leading-relaxed">{body}</p>
