@@ -14,8 +14,8 @@ import {
 const READING_COLUMNS =
   "id, recorded_at, systolic, diastolic, pulse, map, pulse_pressure, weight_kg, waist_cm, " +
   "glucose_mmol, mounjaro_dose_mg, sleep_hours, sleep_deep_min, sleep_rem_min, hrv_ms, " +
-  "steps, calories, protein_g, fat_g, carbs_g, sugar_g, fibre_g, alcohol_units, " +
-  "vo2_max, notes";
+  "steps, calories, protein_g, fat_g, carbs_g, sugar_g, fibre_g, refined_starch_g, " +
+  "alcohol_units, ultra_processed_score, vo2_max, notes";
 
 export function registerReadingTools(server: McpServer, db: ScopedDb) {
   // --- get_latest_reading ---
@@ -136,7 +136,11 @@ export function registerReadingTools(server: McpServer, db: ScopedDb) {
         fat_g: z.number().optional().describe("Fat (g)."),
         carbs_g: z.number().optional().describe("Carbohydrate (g)."),
         sugar_g: z.number().optional().describe("Sugar (g)."),
+        fibre_g: z.number().optional().describe("Fibre (g)."),
+        refined_starch_g: z.number().optional().describe("Refined starch (g)."),
         alcohol_units: z.number().optional().describe("Alcohol units."),
+        ultra_processed_score: z.number().int().min(0).max(3).optional()
+          .describe("Ultra-processed food level for the day: 0 none, 1 a little, 2 some, 3 a lot."),
         hrv_ms: z.number().optional().describe("Heart-rate variability (ms)."),
         vo2_max: z.number().optional().describe("VO2 max."),
         notes: z.string().optional().describe("Free-text notes."),

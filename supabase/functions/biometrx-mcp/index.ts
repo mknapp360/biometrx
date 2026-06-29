@@ -14,6 +14,7 @@ import { handleRegister } from "./oauth/register.ts";
 import { handleAuthorize } from "./oauth/authorize.ts";
 import { handleToken } from "./oauth/token.ts";
 import { registerReadingTools } from "./tools/readings.ts";
+import { registerNutritionTools } from "./tools/nutrition.ts";
 import { registerBloodTools } from "./tools/bloods.ts";
 import { registerWorkoutTools } from "./tools/workouts.ts";
 import { registerScoreTools } from "./tools/score.ts";
@@ -73,6 +74,7 @@ app.all("*", async (c) => {
   const db = scopedDb(identity.userId);
 
   registerReadingTools(server, db);
+  registerNutritionTools(server, db);
   registerBloodTools(server, db);
   registerWorkoutTools(server, db);
   registerScoreTools(server, db);
