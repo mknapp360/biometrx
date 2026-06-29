@@ -24,6 +24,7 @@ Auth model:  user creates a bx_ key → PKCE exchange → opaque bearer token
 ## Tools
 
 - **Readings** — `get_latest_reading`, `list_readings`, `get_bp_average`, `log_reading`
+- **Nutrition** — `add_nutrition` (adds calories/macros to the day's running total — never replaces), `get_nutrition`
 - **Bloods** — `get_latest_blood_panel`, `list_blood_panels`, `log_blood_panel`
 - **Workouts** — `list_workouts`
 - **Score** — `get_biometrx_age`, `get_insights`
