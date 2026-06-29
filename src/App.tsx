@@ -17,6 +17,7 @@ import Profile from './pages/Profile'
 import WeightDrivers from './pages/WeightDrivers'
 import WorkoutHistory from './pages/WorkoutHistory'
 import OAuthAuthorize from './pages/OAuthAuthorize'
+import Landing from './pages/Landing'
 
 export default function App() {
   useEffect(() => {
@@ -36,6 +37,14 @@ export default function App() {
       <PreferencesProvider>
         <BrowserRouter>
           <Routes>
+            <Route
+              path="/"
+              element={
+                Capacitor.isNativePlatform()
+                  ? <Navigate to="/dashboard" replace />
+                  : <Landing />
+              }
+            />
             <Route path="/login" element={<Login />} />
             <Route path="/oauth/authorize" element={<OAuthAuthorize />} />
             <Route
