@@ -7,6 +7,7 @@ import {
   BarChart3,
   Sparkles,
   ChevronRight,
+  ShieldCheck,
 } from 'lucide-react'
 
 const features = [
@@ -57,55 +58,70 @@ export default function Landing() {
       <header className="sticky top-0 z-40 backdrop-blur bg-[#0b1210]/80 border-b border-[#1e3029]">
         <div className="max-w-6xl mx-auto px-5 h-16 flex items-center justify-between">
           <img src="/BioMetrxLogo.png" alt="BioMetRx" className="h-8" />
-          <nav className="flex items-center gap-3">
+          <nav className="hidden md:flex items-center gap-7 text-sm text-gray-300">
+            <a href="#features" className="hover:text-white">Features</a>
+            <a href="#how" className="hover:text-white">How It Works</a>
+          </nav>
+          <div className="flex items-center gap-3">
             <Link to="/login" className="text-sm text-gray-300 hover:text-white font-medium px-3 py-2">
               Sign in
             </Link>
             <Link to="/login?signup=1" className="btn-primary !py-2 !px-4 text-sm">
-              Get started
+              Start Free
             </Link>
-          </nav>
+          </div>
         </div>
       </header>
 
       {/* Hero */}
       <section className="relative overflow-hidden">
         <div
-          className="pointer-events-none absolute inset-0 opacity-60"
+          className="pointer-events-none absolute inset-0"
           style={{
             background:
-              'radial-gradient(60% 50% at 50% -10%, rgba(41,171,0,0.18) 0%, rgba(11,18,16,0) 70%)',
+              'radial-gradient(50% 60% at 70% 30%, rgba(41,171,0,0.16) 0%, rgba(11,18,16,0) 70%)',
           }}
         />
-        <div className="relative max-w-3xl mx-auto px-5 pt-20 pb-16 text-center">
-          <span className="inline-flex items-center gap-2 text-xs font-medium text-brand-green-light bg-brand-green/10 border border-brand-green/20 rounded-full px-3 py-1 mb-6">
-            <Activity className="w-3.5 h-3.5" />
-            Know your real biological age
-          </span>
-          <h1 className="text-4xl sm:text-5xl font-bold tracking-tight leading-[1.1]">
-            Your health,
-            <br className="hidden sm:block" /> measured as an{' '}
-            <span className="text-brand-green">age</span>.
-          </h1>
-          <p className="mt-5 text-lg text-gray-400 leading-relaxed max-w-xl mx-auto">
-            BioMetRx turns your blood pressure, blood tests, weight and lifestyle into one
-            clear score — your BiometRx Age — and shows you exactly how to bring it down.
-          </p>
-          <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
-            <Link to="/login?signup=1" className="btn-primary inline-flex items-center justify-center gap-2">
-              Start tracking free
-              <ChevronRight className="w-4 h-4" />
-            </Link>
-            <Link to="/login" className="btn-secondary inline-flex items-center justify-center !py-3 !px-6">
-              Sign in
-            </Link>
+        <div className="relative max-w-6xl mx-auto px-5 pt-16 pb-16 grid lg:grid-cols-2 gap-10 lg:gap-8 items-center">
+          {/* Left: copy */}
+          <div className="text-center lg:text-left">
+            <h1 className="text-4xl sm:text-5xl font-bold tracking-tight leading-[1.08]">
+              See what <span className="text-brand-green">your</span> metabolism is trying to tell you.
+            </h1>
+            <p className="mt-5 text-lg text-gray-400 leading-relaxed max-w-xl mx-auto lg:mx-0">
+              BioMetRx brings your blood pressure, weight, glucose, medication, activity and lab
+              markers into one personal health dashboard — so you can understand the trend behind
+              the numbers.
+            </p>
+            <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
+              <Link to="/login?signup=1" className="btn-primary inline-flex items-center justify-center gap-2">
+                Start Tracking Your Health
+                <ChevronRight className="w-4 h-4" />
+              </Link>
+              <Link to="/login" className="btn-secondary inline-flex items-center justify-center !py-3 !px-6">
+                See the Dashboard
+              </Link>
+            </div>
+            <p className="mt-5 flex items-center gap-2 text-xs text-gray-500 justify-center lg:justify-start">
+              <ShieldCheck className="w-4 h-4 text-brand-green" />
+              Understand the numbers beneath the scale.
+            </p>
           </div>
-          <p className="mt-4 text-xs text-gray-600">Private by design. Your data is yours.</p>
+
+          {/* Right: product shot */}
+          <div className="relative">
+            <img
+              src="/heroImage.png"
+              alt="BioMetRx dashboard on laptop and phone"
+              className="w-full h-auto"
+              loading="eager"
+            />
+          </div>
         </div>
       </section>
 
       {/* Features */}
-      <section className="max-w-6xl mx-auto px-5 py-12">
+      <section id="features" className="max-w-6xl mx-auto px-5 py-12 scroll-mt-20">
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {features.map(({ icon: Icon, title, body }) => (
             <div key={title} className="card hover:border-brand-green/40 transition-colors">
@@ -120,7 +136,7 @@ export default function Landing() {
       </section>
 
       {/* How it works */}
-      <section className="max-w-4xl mx-auto px-5 py-12">
+      <section id="how" className="max-w-4xl mx-auto px-5 py-12 scroll-mt-20">
         <h2 className="text-2xl font-bold text-center mb-2">How it works</h2>
         <p className="text-center text-gray-500 mb-10">Three steps to a clearer picture of your health.</p>
         <div className="grid sm:grid-cols-3 gap-4">
