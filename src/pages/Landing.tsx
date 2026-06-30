@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   Activity,
@@ -128,6 +128,15 @@ const dashboard = [
 export default function Landing() {
   const year = new Date().getFullYear()
   const [waitlistOpen, setWaitlistOpen] = useState(false)
+
+  // Deep link: open the waitlist automatically when arriving via ?waitlist=1 or #waitlist
+  // (used by the Facebook ad so people land straight on the signup form).
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.has('waitlist') || window.location.hash === '#waitlist') {
+      setWaitlistOpen(true)
+    }
+  }, [])
 
   return (
     <div className="min-h-screen bg-[#121919] text-gray-100">
