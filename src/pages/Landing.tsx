@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   Activity,
@@ -6,7 +7,6 @@ import {
   Weight,
   BarChart3,
   Sparkles,
-  ChevronRight,
   ShieldCheck,
   Scale,
   TrendingUp,
@@ -17,7 +17,11 @@ import {
   Pill,
   Droplet,
   RefreshCw,
+  BellRing,
+  X,
+  Check,
 } from 'lucide-react'
+import { supabase } from '../lib/supabase'
 
 const features = [
   {
@@ -123,6 +127,7 @@ const dashboard = [
 
 export default function Landing() {
   const year = new Date().getFullYear()
+  const [waitlistOpen, setWaitlistOpen] = useState(false)
 
   return (
     <div className="min-h-screen bg-[#121919] text-gray-100">
@@ -134,14 +139,6 @@ export default function Landing() {
             <a href="#features" className="hover:text-white">Features</a>
             <a href="#how" className="hover:text-white">How It Works</a>
           </nav>
-          <div className="flex items-center gap-3">
-            <Link to="/login" className="text-sm text-gray-300 hover:text-white font-medium px-3 py-2">
-              Sign in
-            </Link>
-            <Link to="/login?signup=1" className="btn-primary !py-2 !px-4 text-sm">
-              Start Free
-            </Link>
-          </div>
         </div>
       </header>
 
@@ -157,7 +154,11 @@ export default function Landing() {
         <div className="relative max-w-6xl mx-auto px-5 pt-16 pb-16 grid lg:grid-cols-2 gap-10 lg:gap-8 items-center">
           {/* Left: copy */}
           <div className="text-center lg:text-left">
-            <h1 className="text-4xl sm:text-5xl font-bold tracking-tight leading-[1.08]">
+            <span className="inline-flex items-center gap-2 rounded-full border border-brand-green/30 bg-brand-green/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-brand-green">
+              <span className="w-1.5 h-1.5 rounded-full bg-brand-green animate-pulse" />
+              Launching Soon
+            </span>
+            <h1 className="mt-4 text-4xl sm:text-5xl font-bold tracking-tight leading-[1.08]">
               See what <span className="text-brand-green">your</span> metabolism is trying to tell you.
             </h1>
             <p className="mt-5 text-lg text-gray-400 leading-relaxed max-w-xl mx-auto lg:mx-0">
@@ -166,12 +167,16 @@ export default function Landing() {
               the numbers.
             </p>
             <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
-              <Link to="/login?signup=1" className="btn-primary inline-flex items-center justify-center gap-2">
-                Start Tracking Your Health
-                <ChevronRight className="w-4 h-4" />
-              </Link>
+              <button
+                type="button"
+                onClick={() => setWaitlistOpen(true)}
+                className="btn-primary inline-flex items-center justify-center gap-2"
+              >
+                <BellRing className="w-4 h-4" />
+                Be notified when it goes live
+              </button>
             </div>
-            <p className="mt-5 flex items-center gap-2 text-xs text-gray-500 justify-center lg:justify-start">
+            <p className="mt-5 flex items-center gap-2 text-xs text-white justify-center lg:justify-start">
               <ShieldCheck className="w-4 h-4 text-brand-green" />
               Understand the numbers beneath the scale.
             </p>
@@ -276,14 +281,18 @@ export default function Landing() {
       {/* Final CTA */}
       <section className="max-w-3xl mx-auto px-5 py-12">
         <div className="card text-center border-brand-green/30 bg-gradient-to-b from-brand-green/10 to-[#131f1b] p-8">
-          <h2 className="text-2xl font-bold mb-2">Start lowering your BiometRx Age today</h2>
+          <h2 className="text-2xl font-bold mb-2">Be first through the door</h2>
           <p className="text-gray-400 mb-6 max-w-md mx-auto">
-            Free to use. Set up your profile and log your first reading in under two minutes.
+            BioMetRx is launching soon. Join the list and we'll let you know the moment it's live.
           </p>
-          <Link to="/login?signup=1" className="btn-primary inline-flex items-center justify-center gap-2">
-            Create your account
-            <ChevronRight className="w-4 h-4" />
-          </Link>
+          <button
+            type="button"
+            onClick={() => setWaitlistOpen(true)}
+            className="btn-primary inline-flex items-center justify-center gap-2"
+          >
+            <BellRing className="w-4 h-4" />
+            Notify me at launch
+          </button>
         </div>
       </section>
 
@@ -298,6 +307,134 @@ export default function Landing() {
           <p className="text-xs text-gray-600">© {year} BioMetRx</p>
         </div>
       </footer>
+
+      <WaitlistModal open={waitlistOpen} onClose={() => setWaitlistOpen(false)} />
+    </div>
+  )
+}
+
+function WaitlistModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const [firstName, setFirstName] = useState('')
+  const [email, setEmail] = useState('')
+  const [status, setStatus] = useState<'idle' | 'saving' | 'done'>('idle')
+  const [error, setError] = useState('')
+
+  if (!open) return null
+
+  const reset = () => {
+    setFirstName('')
+    setEmail('')
+    setStatus('idle')
+    setError('')
+  }
+
+  const close = () => {
+    reset()
+    onClose()
+  }
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError('')
+    setStatus('saving')
+
+    const { error: insertError } = await supabase
+      .from('waitlist')
+      .insert({ first_name: firstName.trim(), email: email.trim().toLowerCase() })
+
+    if (insertError) {
+      // 23505 = unique violation → email already on the list, treat as success
+      if (insertError.code === '23505') {
+        setStatus('done')
+        return
+      }
+      setStatus('idle')
+      setError('Something went wrong. Please try again.')
+      return
+    }
+
+    setStatus('done')
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+      onClick={close}
+    >
+      <div
+        className="card relative w-full max-w-md p-6 border-brand-green/30"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          type="button"
+          onClick={close}
+          aria-label="Close"
+          className="absolute top-4 right-4 text-gray-500 hover:text-white transition-colors"
+        >
+          <X className="w-5 h-5" />
+        </button>
+
+        {status === 'done' ? (
+          <div className="text-center py-4">
+            <div className="w-12 h-12 rounded-full bg-brand-green/15 border border-brand-green/30 flex items-center justify-center mx-auto mb-4">
+              <Check className="w-6 h-6 text-brand-green" />
+            </div>
+            <h3 className="text-xl font-bold text-white mb-1.5">You're on the list!</h3>
+            <p className="text-sm text-gray-400 mb-6">
+              Thanks{firstName ? `, ${firstName.trim()}` : ''} — we'll email you the moment
+              BioMetRx goes live.
+            </p>
+            <button type="button" onClick={close} className="btn-primary w-full justify-center">
+              Done
+            </button>
+          </div>
+        ) : (
+          <>
+            <div className="w-10 h-10 rounded-xl bg-brand-green/10 border border-brand-green/20 flex items-center justify-center mb-4">
+              <BellRing className="w-5 h-5 text-brand-green" />
+            </div>
+            <h3 className="text-xl font-bold text-white mb-1.5">Be notified when it goes live</h3>
+            <p className="text-sm text-gray-400 mb-5">
+              Drop your details and we'll let you know the moment BioMetRx launches. No spam.
+            </p>
+
+            <form onSubmit={submit} className="space-y-3">
+              <input
+                type="text"
+                required
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                placeholder="First name"
+                autoComplete="given-name"
+                className="input-field"
+              />
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Email address"
+                autoComplete="email"
+                className="input-field"
+              />
+
+              {error && <p className="text-sm text-red-400">{error}</p>}
+
+              <button
+                type="submit"
+                disabled={status === 'saving'}
+                className="btn-primary w-full justify-center disabled:opacity-60"
+              >
+                {status === 'saving' ? 'Adding you…' : 'Notify me at launch'}
+              </button>
+            </form>
+
+            <p className="mt-3 text-center text-xs text-white">
+              We'll only use your email to tell you about the BioMetRx launch.
+            </p>
+          </>
+        )}
+      </div>
     </div>
   )
 }
