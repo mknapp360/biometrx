@@ -79,8 +79,11 @@ export default function Dashboard() {
   const avg30 = getAverageBP(readings, 30)
   const weightChange = getWeightChange(readings, 30)
   const latestMounjaroDose = readings.find(r => r.mounjaro_dose_mg !== null)?.mounjaro_dose_mg
-  const latestStepsFromDb = readings.find(r => r.steps !== null)?.steps
-  const latestSteps = hcEnabled && todaySteps !== null ? todaySteps : latestStepsFromDb
+  const latestStepsFromDb = readings.find(r => r.steps !== null)?.steps ?? null
+  // Prefer today's live Health Connect count only when it's actually present and non-zero;
+  // otherwise fall back to the most recent entered value so manually-logged steps always show.
+  const liveSteps = hcEnabled && todaySteps ? todaySteps : null
+  const latestSteps = liveSteps ?? latestStepsFromDb
 
   const now = new Date()
   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate())
@@ -108,6 +111,11 @@ export default function Dashboard() {
 
   // Waist: most recent
   const latestWaist = readings.find(r => r.waist_cm !== null)?.waist_cm ?? null
+
+  // Pulse pressure & MAP: use the most recent reading that actually has BP-derived
+  // values, not just the newest reading (which is often steps/diet-only with no BP).
+  const latestPulsePressure = readings.find(r => r.pulse_pressure !== null)?.pulse_pressure ?? null
+  const latestMap = readings.find(r => r.map !== null)?.map ?? null
 
   const latestPanel = panels.length > 0 ? panels[0]! : null
 
@@ -249,13 +257,17 @@ export default function Dashboard() {
             />
             <StatCard
               label="Pulse Pressure"
-              value={latest?.pulse_pressure ?? null}
-              accent={latest?.pulse_pressure && latest.pulse_pressure > 60 ? 'warning' : 'default'}
+              value={latestPulsePressure}
+              unit="mmHg"
+              subtitle="Sys − dia gap"
+              accent={latestPulsePressure !== null && latestPulsePressure > 60 ? 'warning' : 'default'}
             />
             <StatCard
-              label="Cardio Load"
-              value={latest?.map ? Number(latest.map).toFixed(0) : null}
-              accent={latest?.map && Number(latest.map) > 100 ? 'warning' : 'default'}
+              label="MAP"
+              value={latestMap !== null ? Number(latestMap).toFixed(0) : null}
+              unit="mmHg"
+              subtitle="Mean arterial pressure"
+              accent={latestMap !== null && Number(latestMap) > 100 ? 'warning' : 'default'}
             />
           </div>
 
@@ -283,7 +295,7 @@ export default function Dashboard() {
             <StatCard
               label="Steps"
               value={latestSteps !== null && latestSteps !== undefined ? latestSteps.toLocaleString() : null}
-              subtitle={hcEnabled && todaySteps !== null ? 'Today · live' : 'Latest'}
+              subtitle={liveSteps !== null ? 'Today · live' : 'Latest'}
             />
           </div>
 
